@@ -1,8 +1,7 @@
 # Project Meeting Summary
 
-**Date:** [Insert Date]  
-**Attendees:** [List of attendees]  
-**Location:** [Meeting location - University/Telegram/etc.]
+**Date:** 11/18/25   
+Telegram meeting (live)
 
 ## Meeting Purpose
 We decided to formally begin working on the mobile project with increased commitment and organization. This meeting served as an official kickoff to reinforce team structure and establish clear development workflows.
