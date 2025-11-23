@@ -12,11 +12,30 @@ class _AboutPageState extends State<AboutPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: _appBar(),
-
-      body: const Center(
-        child: Text('Test text'),
-      ),
+      backgroundColor: Colors.white,
+      body: ListView(
+        children: [
+          SizedBox(height: 40,),
+          _titleSection()
+        ],
+      )
     );
+  }
+
+  Container _titleSection() {
+    return Container(
+          height: 300,
+          color: Color(0xffF5F5F5),
+          child: Center(
+            child: Text(
+              'Smart Budget',
+              style: TextStyle(
+                fontSize: 40,
+                fontWeight: FontWeight.w600,
+              )
+            )
+          )
+        );
   }
 
   AppBar _appBar() {
