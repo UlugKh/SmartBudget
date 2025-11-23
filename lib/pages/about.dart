@@ -16,28 +16,46 @@ class _AboutPageState extends State<AboutPage> {
       backgroundColor: Colors.white,
       body: ListView(
         children: [
-          SizedBox(height: 40,),
-          _titleSection()
+          SizedBox(height: 40),
+          _titleSection(),
+          Container(
+            padding: EdgeInsets.all(40),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+              children: [
+                Expanded(
+                  child: Image.asset(
+                    'assets/icons/budget_picture.png',
+                    height: 180,
+                    fit: BoxFit.contain,
+                  ),
+                ),
+                SizedBox(width: 20),
+                Expanded(
+                  child: Image.asset(
+                    'assets/icons/finance_tracking.png',
+                    height: 180,
+                    fit: BoxFit.contain,
+                  ),
+                ),
+              ],
+            ),
+          ),
         ],
-      )
+      ),
     );
   }
 
   Container _titleSection() {
     return Container(
-          height: 300,
-          color: Color(0xffF5F5F5),
-          child: Center(
-            child: Text(
-              'Smart Budget',
-              style: TextStyle(
-                fontSize: 40,
-                fontWeight: FontWeight.w600,
-              )
-            )
-          )
-        );
+      height: 300,
+      color: Color(0xffF5F5F5),
+      child: Center(
+        child: Text(
+          'Smart Budget',
+          style: TextStyle(fontSize: 40, fontWeight: FontWeight.w600),
+        ),
+      ),
+    );
   }
 }
-
-
