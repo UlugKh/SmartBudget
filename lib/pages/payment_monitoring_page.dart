@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../models/payment.dart';
+import 'add_payment_page.dart';
 
 class PaymentMonitoringPage extends StatefulWidget {
   const PaymentMonitoringPage({super.key});
@@ -67,6 +68,20 @@ class _PaymentMonitoringPageState extends State<PaymentMonitoringPage> {
         .fold(0, (sum, p) => sum + p.amount);
   }
 
+  Future<void> _openAddPaymentPage() async {
+    final result = await Navigator.of(context).push<Payment>(
+      MaterialPageRoute(
+        builder: (context) => const AddPaymentPage(),
+      ),
+    );
+
+    if (result != null) {
+      setState(() {
+        _payments.add(result);
+      });
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -83,7 +98,7 @@ class _PaymentMonitoringPageState extends State<PaymentMonitoringPage> {
         ],
       ),
       floatingActionButton: FloatingActionButton(
-        onPressed: () {},
+        onPressed: _openAddPaymentPage,
         child: const Icon(Icons.add),
       ),
     );
