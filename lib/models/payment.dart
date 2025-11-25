@@ -14,4 +14,27 @@ class Payment {
     required this.date,
     required this.isIncome,
   });
+
+
+  Map<String, dynamic> toMap() {
+    return {
+      'id': id,
+      'amount': amount,
+      'category': category,
+      'note': note,
+      'date': date.toIso8601String(),
+      'isIncome': isIncome,
+    };
+  }
+
+  factory Payment.fromMap(Map<String, dynamic> map) {
+    return Payment(
+      id: map['id'] as String,
+      amount: (map['amount'] as num).toDouble(),
+      category: map['category'] as String,
+      note: map['note'] as String,
+      date: DateTime.parse(map['date'] as String),
+      isIncome: map['isIncome'] as bool,
+    );
+  }
 }

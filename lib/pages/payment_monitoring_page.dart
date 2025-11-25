@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:hive_flutter/hive_flutter.dart';
 import '../models/payment.dart';
 import 'add_payment_page.dart';
 
@@ -11,15 +12,27 @@ class PaymentMonitoringPage extends StatefulWidget {
 
 class _PaymentMonitoringPageState extends State<PaymentMonitoringPage> {
   final List<Payment> _payments = [];
+  late final Box _paymentsBox;
 
   @override
   void initState() {
     super.initState();
-    _exampleData();
+    _paymentsBox = Hive.box('payments');
+    _initData();
   }
 
-  void _exampleData() {
-    _payments.addAll([
+  Future<void> _initData() async {
+    if (_paymentsBox.isEmpty) {
+      final examples = _exampleData();
+      for (final p in examples) {
+        _paymentsBox.add(p.toMap());
+      }
+    }
+    _loadPaymentsFromHive();
+  }
+
+  List<Payment> _exampleData() {
+    return [
       Payment(
         id: '1',
         amount: 25000,
@@ -44,7 +57,18 @@ class _PaymentMonitoringPageState extends State<PaymentMonitoringPage> {
         date: DateTime.now().subtract(const Duration(days: 3)),
         isIncome: true,
       ),
-    ]);
+    ];
+  }
+
+  void _loadPaymentsFromHive() {
+    _payments.clear();
+    for (final value in _paymentsBox.values) {
+      if (value is Map) {
+        final map = Map<String, dynamic>.from(value as Map);
+        _payments.add(Payment.fromMap(map));
+      }
+    }
+    setState(() {});
   }
 
   double get _totalThisMonth {
@@ -76,6 +100,7 @@ class _PaymentMonitoringPageState extends State<PaymentMonitoringPage> {
     );
 
     if (result != null) {
+      _paymentsBox.add(result.toMap());
       setState(() {
         _payments.add(result);
       });
