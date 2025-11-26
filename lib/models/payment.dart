@@ -1,10 +1,19 @@
+enum Category {
+  food,
+  transport,
+  shopping,
+  entertainment,
+  other,
+}
+
 class Payment {
   final String id;
   final double amount;
-  final String category;
+  final Category category;
   final String note;
   final DateTime date;
   final bool isIncome;
+  final bool isSafing;
 
   Payment({
     required this.id,
@@ -13,28 +22,30 @@ class Payment {
     required this.note,
     required this.date,
     required this.isIncome,
+    required this.isSafing,
   });
-
 
   Map<String, dynamic> toMap() {
     return {
       'id': id,
       'amount': amount,
-      'category': category,
+      'category': category.name, // store enum as string
       'note': note,
       'date': date.toIso8601String(),
-      'isIncome': isIncome,
+      'isIncome': isIncome ? 1 : 0,
+      'isSafing': isSafing ? 1 : 0,
     };
   }
 
   factory Payment.fromMap(Map<String, dynamic> map) {
     return Payment(
-      id: map['id'] as String,
+      id: map['id'],
       amount: (map['amount'] as num).toDouble(),
-      category: map['category'] as String,
-      note: map['note'] as String,
-      date: DateTime.parse(map['date'] as String),
-      isIncome: map['isIncome'] as bool,
+      category: Category.values.firstWhere((e) => e.name == map['category']),
+      note: map['note'] ?? '',
+      date: DateTime.parse(map['date']),
+      isIncome: map['isIncome'] == 1,
+      isSafing: map['isSafing'] == 1,
     );
   }
 }
