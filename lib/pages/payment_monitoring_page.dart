@@ -36,26 +36,26 @@ class _PaymentMonitoringPageState extends State<PaymentMonitoringPage> {
       Payment(
         id: '1',
         amount: 25000,
-        category: 'Mini Lavash',
+        category: Category.food,
         note: 'Lunch with homies',
         date: DateTime.now().subtract(const Duration(hours: 2)),
-        isIncome: false,
+        isIncome: false, isSaving: false,
       ),
       Payment(
         id: '2',
         amount: 1700,
-        category: 'Transport',
+        category: Category.transport,
         note: 'Bus card',
         date: DateTime.now().subtract(const Duration(days: 1)),
-        isIncome: false,
+        isIncome: false, isSaving: false,
       ),
       Payment(
         id: '3',
         amount: 200000,
-        category: 'Allowance',
+        category: Category.other,
         note: 'Weekly allowance',
         date: DateTime.now().subtract(const Duration(days: 3)),
-        isIncome: true,
+        isIncome: true, isSaving: false,
       ),
     ];
   }
@@ -238,7 +238,7 @@ class _PaymentMonitoringPageState extends State<PaymentMonitoringPage> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  payment.category,
+                  payment.category as String,
                   style: const TextStyle(
                     color: Colors.white,
                     fontWeight: FontWeight.w600,

@@ -12,7 +12,7 @@ class _AddPaymentPageState extends State<AddPaymentPage> {
   final TextEditingController _amountController = TextEditingController();
   final TextEditingController _noteController = TextEditingController();
 
-  String _selectedCategory = 'Food';
+  Category _selectedCategory = Category.food;
   bool _isIncome = false;
   DateTime _selectedDate = DateTime.now();
 
@@ -58,6 +58,7 @@ class _AddPaymentPageState extends State<AddPaymentPage> {
       note: note.isEmpty ? '-' : note,
       date: _selectedDate,
       isIncome: _isIncome,
+      isSaving: false,
     );
 
     Navigator.of(context).pop(payment);
@@ -84,7 +85,8 @@ class _AddPaymentPageState extends State<AddPaymentPage> {
             ),
             const SizedBox(height: 16),
             DropdownButtonFormField<String>(
-              value: _selectedCategory,
+              // ignore: deprecated_member_use
+              value: _selectedCategory as String,
               items: const [
                 DropdownMenuItem(value: 'Food', child: Text('Food')),
                 DropdownMenuItem(value: 'Transport', child: Text('Transport')),
@@ -95,7 +97,7 @@ class _AddPaymentPageState extends State<AddPaymentPage> {
               onChanged: (value) {
                 if (value == null) return;
                 setState(() {
-                  _selectedCategory = value;
+                  _selectedCategory = value as Category;
                 });
               },
               decoration: const InputDecoration(

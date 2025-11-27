@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:smart_budget/util/button-widget.dart';
 import 'package:flutter_svg/flutter_svg.dart';
-import 'package:smart_budget/util/appBar.dart';
+import 'package:smart_budget/util/appbar.dart';
 
 class AboutPage extends StatefulWidget {
   @override
@@ -12,7 +12,6 @@ class _AboutPageState extends State<AboutPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: appBar(),
       backgroundColor: Colors.white,
       body: ListView(
         children: [
@@ -21,7 +20,7 @@ class _AboutPageState extends State<AboutPage> {
           Container(
             padding: EdgeInsets.all(40),
             child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+              mainAxisAlignment:  MainAxisAlignment.spaceEvenly,
               children: [
                 Expanded(
                   child: Image.asset(
@@ -43,6 +42,7 @@ class _AboutPageState extends State<AboutPage> {
           ),
         ],
       ),
+      bottomNavigationBar: AppBottomNavBar(currentIndex: 4, onTap:(i) => {}),
     );
   }
 
