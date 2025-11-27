@@ -13,7 +13,7 @@ class Payment {
   final String note;
   final DateTime date;
   final bool isIncome;
-  final bool isSafing;
+  final bool isSaving;
 
   Payment({
     required this.id,
@@ -22,7 +22,7 @@ class Payment {
     required this.note,
     required this.date,
     required this.isIncome,
-    required this.isSafing,
+    required this.isSaving,
   });
 
   Map<String, dynamic> toMap() {
@@ -33,7 +33,7 @@ class Payment {
       'note': note,
       'date': date.toIso8601String(),
       'isIncome': isIncome ? 1 : 0,
-      'isSafing': isSafing ? 1 : 0,
+      'isSafing': isSaving ? 1 : 0,
     };
   }
 
@@ -45,7 +45,7 @@ class Payment {
       note: map['note'] ?? '',
       date: DateTime.parse(map['date']),
       isIncome: map['isIncome'] == 1,
-      isSafing: map['isSafing'] == 1,
+      isSaving: map['isSafing'] == 1,
     );
   }
 }
