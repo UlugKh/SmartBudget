@@ -15,7 +15,6 @@ dependencies:
   provider: ^6.1.1
   intl: ^0.19.0
   uuid: ^4.2.2
-  hive: ^2.2.3
   hive_flutter: ^1.1.0
   sqflite: ^2.4.2
   path: ^1.9.1
@@ -30,8 +29,10 @@ dev_dependencies:
 
 flutter:
   uses-material-design: true
+
   assets:
     - assets/icons/
+
   fonts:
     - family: Poppins
       fonts:
@@ -43,4 +44,3 @@ flutter:
           weight: 700
         - asset: fonts/Poppins-SemiBold.ttf
           weight: 600
-  
