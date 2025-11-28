@@ -34,10 +34,6 @@ class AboutPage extends StatelessWidget {
           ],
         ),
       ),
-      bottomNavigationBar: AppBottomNavBar(
-        currentIndex: 4,
-        onTap: (i) => {},
-      ),
     );
   }
 
@@ -168,25 +164,25 @@ class AboutPage extends StatelessWidget {
               _FeatureTile(
                 icon: Icons.receipt_long_rounded,
                 title: "Easy tracking",
-                subtitle: "Log spends quickly.",
+                subtitle: "Financial awareness",
                 tint: _greenSoft,
               ),
               _FeatureTile(
                 icon: Icons.category_rounded,
                 title: "Categories",
-                subtitle: "Know where money goes.",
+                subtitle: "Categorizations help save",
                 tint: Color(0xFFF1F1F1),
               ),
               _FeatureTile(
                 icon: Icons.emoji_events_rounded,
                 title: "Badges",
-                subtitle: "Progress feels rewarding.",
+                subtitle: "Rewards for saving goals",
                 tint: _goldSoft,
               ),
               _FeatureTile(
                 icon: Icons.insights_rounded,
                 title: "Clear insights",
-                subtitle: "See habits at a glance.",
+                subtitle: "Amazing presentation",
                 tint: Color(0xFFEFF5FF),
               ),
             ],
@@ -201,7 +197,7 @@ class AboutPage extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         const Text(
-          "A quick look",
+          "Start today!",
           style: TextStyle(
             fontSize: 16.5,
             fontWeight: FontWeight.w800,
