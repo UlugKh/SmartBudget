@@ -33,7 +33,7 @@ class Payment {
       'note': note,
       'date': date.toIso8601String(),
       'isIncome': isIncome ? 1 : 0,
-      'isSafing': isSaving ? 1 : 0,
+      'isSaving': isSaving ? 1 : 0,
     };
   }
 
@@ -45,7 +45,7 @@ class Payment {
       note: map['note'] ?? '',
       date: DateTime.parse(map['date']),
       isIncome: map['isIncome'] == 1,
-      isSaving: map['isSafing'] == 1,
+      isSaving: map['isSaving'] == 1,
     );
   }
 }
