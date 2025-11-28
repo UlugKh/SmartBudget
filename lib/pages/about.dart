@@ -34,10 +34,6 @@ class AboutPage extends StatelessWidget {
           ],
         ),
       ),
-      bottomNavigationBar: AppBottomNavBar(
-        currentIndex: 4,
-        onTap: (i) => {},
-      ),
     );
   }
 
