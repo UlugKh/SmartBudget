@@ -28,18 +28,21 @@ class AppDatabase {
     );
   }
 
-  Future<void> _onCreate(Database db, int version) async {  //runs only when first created
+  Future<void> _onCreate(Database db, int version) async { //runs only when first created
     await db.execute('''
-    id TEXT PRIMARY KEY,
-    amount REAL NOT NULL,
-    category TEXT NOT NULL,
-    note TEXT,
-    date TEXT NOT NULL,
-    isIncome INTEGER NOT NULL,
-    isSafing INTEGER NOT NULL     
-    ''');
-    //Add all of the table creations (first time) SQL above ^
+    CREATE TABLE payments (
+      id TEXT PRIMARY KEY,
+      amount REAL NOT NULL,
+      category TEXT NOT NULL,
+      note TEXT,
+      date TEXT NOT NULL,
+      isIncome INTEGER NOT NULL,
+      isSafing INTEGER NOT NULL
+    )
+  ''');
+    ////Add all of the table creations (first time) SQL above ^
   }
+
 
   Future<void> _onUpgrade(Database db, int oldV, int newV) async {
     //for future migrations

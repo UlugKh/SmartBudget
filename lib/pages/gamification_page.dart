@@ -1,5 +1,10 @@
 import 'package:flutter/material.dart' hide Badge;
 import '../models/badge.dart';
+import '../models/monthly_goal.dart';
+import '../logic/badge_logic.dart';
+import '../models/payment.dart';
+import '../data/local/payment_dao.dart';
+
 
 class GamificationPage extends StatefulWidget {
   const GamificationPage({super.key});
@@ -9,71 +14,138 @@ class GamificationPage extends StatefulWidget {
 }
 
 class _GamificationPageState extends State<GamificationPage> {
-  // Goal state
-  double monthlyGoal = 500.00;
-  final double currentSavings = 350.00;
+  MonthlyGoal _monthlyGoal =
+  const MonthlyGoal(targetAmount: 500.0, currentSavings: 350.0);
 
-  // LOGIC: Defined tiers for each badge
-  final List<Badge> badges = [
-    Badge(
-      id: 1,
-      name: 'Stone',
-      description: 'Start your journey: Save \$50',
-      iconPath: 'assets/icons/stone.png',
-      isUnlocked: true,
-      targetValue: 50.0,
-      progress: 50.0,
-    ),
-    Badge(
-      id: 2,
-      name: 'Silver',
-      description: 'Getting serious: Save \$100',
-      iconPath: 'assets/icons/silver.png',
-      isUnlocked: true,
-      targetValue: 100.0,
-      progress: 100.0,
-    ),
-    Badge(
-      id: 3,
-      name: 'Gold',
-      description: 'Big steps: Save \$500',
-      iconPath: 'assets/icons/gold.png',
-      isUnlocked: false,
-      targetValue: 500.0,
-      progress: 350.0,
-    ),
-    Badge(
-      id: 4,
-      name: 'Diamond',
-      description: 'Expert saver: Save \$1,000',
-      iconPath: 'assets/icons/diamond.png',
-      isUnlocked: false,
-      targetValue: 1000.0,
-      progress: 350.0,
-    ),
-    Badge(
-      id: 5,
-      name: 'Platinum',
-      description: 'Elite status: Save \$5,000',
-      iconPath: 'assets/icons/platinum.png',
-      isUnlocked: false,
-      targetValue: 5000.0,
-      progress: 350.0,
-    ),
-    Badge(
-      id: 6,
-      name: 'Master',
-      description: 'Legendary: Save \$10,000',
-      iconPath: 'assets/icons/master.png',
-      isUnlocked: false,
-      targetValue: 10000.0,
-      progress: 350.0,
-    ),
-  ];
+  late final List<Badge> _badgeDefinitions;
+  List<Badge> _badges = [];
+
+  bool _isLoading = true;
+  String? _error;
+
+  @override
+  void initState() {
+    super.initState();
+    _initBadges();
+    _loadGamificationData();
+  }
+
+  void _initBadges() {
+    _badgeDefinitions = [
+      const Badge(
+        id: 1,
+        name: 'Stone',
+        description: 'Start your journey: Save \$50',
+        iconPath: 'assets/icons/stone.png',
+        targetValue: 50.0,
+        isUnlocked: false,
+        progress: 0.0,
+      ),
+      const Badge(
+        id: 2,
+        name: 'Silver',
+        description: 'Getting serious: Save \$100',
+        iconPath: 'assets/icons/silver.png',
+        targetValue: 100.0,
+        isUnlocked: false,
+        progress: 0.0,
+      ),
+      const Badge(
+        id: 3,
+        name: 'Gold',
+        description: 'Big steps: Save \$500',
+        iconPath: 'assets/icons/gold.png',
+        targetValue: 500.0,
+        isUnlocked: false,
+        progress: 0.0,
+      ),
+      const Badge(
+        id: 4,
+        name: 'Diamond',
+        description: 'Expert saver: Save \$1,000',
+        iconPath: 'assets/icons/diamond.png',
+        targetValue: 1000.0,
+        isUnlocked: false,
+        progress: 0.0,
+      ),
+      const Badge(
+        id: 5,
+        name: 'Platinum',
+        description: 'Elite status: Save \$5,000',
+        iconPath: 'assets/icons/platinum.png',
+        targetValue: 5000.0,
+        isUnlocked: false,
+        progress: 0.0,
+      ),
+      const Badge(
+        id: 6,
+        name: 'Master',
+        description: 'Legendary: Save \$10,000',
+        iconPath: 'assets/icons/master.png',
+        targetValue: 10000.0,
+        isUnlocked: false,
+        progress: 0.0,
+      ),
+    ];
+  }
+
+  Future<void> _loadGamificationData() async {
+    setState(() {
+      _isLoading = true;
+      _error = null;
+    });
+
+    try {
+      final now = DateTime.now();
+      final yearMonth =
+          '${now.year.toString().padLeft(4, '0')}-${now.month.toString().padLeft(2, '0')}';
+
+      final dao = PaymentDao();
+      final List<Payment> payments =
+      await dao.getPaymentsByMonth(yearMonth);
+
+      double savings = 0;
+
+      for (final p in payments) {
+        if (p.isIncome) {
+          savings += p.amount;
+        } else {
+          savings -= p.amount;
+        }
+      }
+
+      final updatedGoal = MonthlyGoal(
+        targetAmount: _monthlyGoal.targetAmount,
+        currentSavings: savings,
+      );
+
+      final evaluatedBadges = evaluateBadges(
+        currentSavings: savings,
+        definitions: _badgeDefinitions,
+      );
+
+      setState(() {
+        _monthlyGoal = updatedGoal;
+        _badges = evaluatedBadges;
+        _isLoading = false;
+      });
+    } catch (e, stack) {
+      print('Gamification error: $e');
+      print(stack);
+      setState(() {
+      _error = e.toString();
+      _isLoading = false;
+      });
+    }
+  }
+
+
+
 
   void _showEditGoalDialog() {
-    TextEditingController controller =
-    TextEditingController(text: monthlyGoal.toStringAsFixed(0));
+    final controller = TextEditingController(
+      text: _monthlyGoal.targetAmount.toStringAsFixed(0),
+    );
 
     showDialog(
       context: context,
@@ -82,7 +154,8 @@ class _GamificationPageState extends State<GamificationPage> {
           title: const Text('Set Monthly Goal'),
           content: TextField(
             controller: controller,
-            keyboardType: const TextInputType.numberWithOptions(decimal: true),
+            keyboardType:
+            const TextInputType.numberWithOptions(decimal: true),
             decoration: const InputDecoration(
               labelText: 'Target Amount (\$)',
               border: OutlineInputBorder(),
@@ -102,7 +175,14 @@ class _GamificationPageState extends State<GamificationPage> {
                 final newGoal = double.tryParse(controller.text);
                 if (newGoal != null && newGoal > 0) {
                   setState(() {
-                    monthlyGoal = newGoal;
+                    _monthlyGoal = MonthlyGoal(
+                      targetAmount: newGoal,
+                      currentSavings: _monthlyGoal.currentSavings,
+                    );
+                    _badges = evaluateBadges(
+                      currentSavings: _monthlyGoal.currentSavings,
+                      definitions: _badgeDefinitions,
+                    );
                   });
                 }
                 Navigator.pop(context);
@@ -118,33 +198,32 @@ class _GamificationPageState extends State<GamificationPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      // THEME UPDATE: Blue background kept
       backgroundColor: Colors.blue[50],
       appBar: AppBar(
         title: const Text(
           'Achievements',
-          // REVERTED: Default black text style
           style: TextStyle(fontWeight: FontWeight.bold),
         ),
         centerTitle: true,
         backgroundColor: Colors.transparent,
         elevation: 0,
-        // REVERTED: Default icon theme
       ),
-      body: SingleChildScrollView(
+      body: _isLoading
+          ? const Center(child: CircularProgressIndicator())
+          : _error != null
+          ? Center(child: Text(_error!))
+          : SingleChildScrollView(
         child: Padding(
           padding: const EdgeInsets.all(16.0),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
-              // Circular Tracker
               SavingsGoalCard(
-                targetAmount: monthlyGoal,
-                currentAmount: currentSavings,
+                targetAmount: _monthlyGoal.targetAmount,
+                currentAmount: _monthlyGoal.currentSavings,
                 onEditPressed: _showEditGoalDialog,
               ),
               const SizedBox(height: 30),
-
               const Align(
                 alignment: Alignment.centerLeft,
                 child: Text(
@@ -152,27 +231,25 @@ class _GamificationPageState extends State<GamificationPage> {
                   style: TextStyle(
                     fontSize: 24,
                     fontWeight: FontWeight.bold,
-                    // REVERTED: Black text
                     color: Colors.black87,
                   ),
                 ),
               ),
               const SizedBox(height: 16),
-
-              // Grid of Badges
               GridView.builder(
                 shrinkWrap: true,
-                physics: const NeverScrollableScrollPhysics(),
-                // Keeps the layout responsive and square
-                gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
+                physics:
+                const NeverScrollableScrollPhysics(),
+                gridDelegate:
+                const SliverGridDelegateWithMaxCrossAxisExtent(
                   maxCrossAxisExtent: 200,
                   crossAxisSpacing: 16,
                   mainAxisSpacing: 16,
                   childAspectRatio: 1.0,
                 ),
-                itemCount: badges.length,
+                itemCount: _badges.length,
                 itemBuilder: (context, index) {
-                  return BadgeTile(badge: badges[index]);
+                  return BadgeTile(badge: _badges[index]);
                 },
               ),
             ],
@@ -208,7 +285,7 @@ class SavingsGoalCard extends StatelessWidget {
         borderRadius: BorderRadius.circular(24),
         boxShadow: [
           BoxShadow(
-            color: Colors.blue.withOpacity(0.1), // THEME UPDATE: Blue shadow kept
+            color: Colors.blue.withOpacity(0.1),
             spreadRadius: 4,
             blurRadius: 10,
             offset: const Offset(0, 4),
@@ -223,38 +300,33 @@ class SavingsGoalCard extends StatelessWidget {
               const Text(
                 'Monthly Goal',
                 style: TextStyle(
-                    fontSize: 22,
-                    fontWeight: FontWeight.bold,
-                    // REVERTED: Black54 color
-                    color: Colors.black54
+                  fontSize: 22,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.black54,
                 ),
               ),
               IconButton(
                 iconSize: 30,
-                // REVERTED: BlueGrey icon
                 icon: const Icon(Icons.edit, color: Colors.blueGrey),
                 onPressed: onEditPressed,
               )
             ],
           ),
           const SizedBox(height: 20),
-
-          // --- CIRCULAR TRACKER ---
           Stack(
             alignment: Alignment.center,
             children: [
-              // 1. Background Circle
               SizedBox(
                 width: 260,
                 height: 260,
                 child: CircularProgressIndicator(
                   value: 1.0,
                   strokeWidth: 25,
-                  // THEME UPDATE: Blue tint background
-                  valueColor: AlwaysStoppedAnimation<Color>(Colors.blue.shade50),
+                  valueColor: AlwaysStoppedAnimation<Color>(
+                    Colors.blue.shade50,
+                  ),
                 ),
               ),
-              // 2. Progress Circle (Blue)
               SizedBox(
                 width: 260,
                 height: 260,
@@ -262,12 +334,11 @@ class SavingsGoalCard extends StatelessWidget {
                   value: progressPercent,
                   strokeWidth: 25,
                   strokeCap: StrokeCap.round,
-                  // THEME UPDATE: Blue Progress kept
-                  valueColor: const AlwaysStoppedAnimation<Color>(Colors.blue),
+                  valueColor:
+                  const AlwaysStoppedAnimation<Color>(Colors.blue),
                   backgroundColor: Colors.transparent,
                 ),
               ),
-              // 3. Text in the Middle
               Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
@@ -281,14 +352,13 @@ class SavingsGoalCard extends StatelessWidget {
                     style: const TextStyle(
                       fontSize: 42,
                       fontWeight: FontWeight.bold,
-                      // REVERTED: Black87 text
                       color: Colors.black87,
                     ),
                   ),
                   const SizedBox(height: 8),
                   Text(
                     'of \$${targetAmount.toStringAsFixed(0)}',
-                    style: TextStyle(
+                    style: const TextStyle(
                       fontSize: 18,
                       color: Colors.grey,
                     ),
@@ -316,13 +386,12 @@ class BadgeTile extends StatelessWidget {
         borderRadius: BorderRadius.circular(20),
         boxShadow: [
           BoxShadow(
-            color: Colors.blue.withOpacity(0.05), // Light blue shadow
+            color: Colors.blue.withOpacity(0.05),
             spreadRadius: 2,
             blurRadius: 8,
             offset: const Offset(0, 2),
           ),
         ],
-        // THEME UPDATE: Blue border if unlocked
         border: badge.isUnlocked
             ? Border.all(color: Colors.blue.withOpacity(0.3), width: 1.5)
             : null,
@@ -340,7 +409,8 @@ class BadgeTile extends StatelessWidget {
                   badge.iconPath,
                   fit: BoxFit.contain,
                   errorBuilder: (ctx, err, stack) =>
-                  const Icon(Icons.star, size: 60, color: Colors.amber),
+                  const Icon(Icons.star,
+                      size: 60, color: Colors.amber),
                 )
                     : Opacity(
                   opacity: 0.3,
@@ -348,7 +418,8 @@ class BadgeTile extends StatelessWidget {
                     badge.iconPath,
                     fit: BoxFit.contain,
                     errorBuilder: (ctx, err, stack) =>
-                    const Icon(Icons.lock, size: 60, color: Colors.grey),
+                    const Icon(Icons.lock,
+                        size: 60, color: Colors.grey),
                   ),
                 ),
               ),
@@ -359,7 +430,6 @@ class BadgeTile extends StatelessWidget {
               style: TextStyle(
                 fontWeight: FontWeight.bold,
                 fontSize: 20,
-                // REVERTED: Black87/Grey
                 color: badge.isUnlocked ? Colors.black87 : Colors.grey,
               ),
             ),
