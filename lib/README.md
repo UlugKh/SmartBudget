@@ -21,7 +21,7 @@ CREATE TABLE payments (
 4. note TEXT,
 5. date TEXT NOT NULL,
 6. isIncome INTEGER NOT NULL,
-7. isSafing INTEGER DEFAULT 0
+7. isSaving INTEGER DEFAULT 0
 );
 
 
@@ -39,7 +39,7 @@ date – date of payment (ISO 8601 string)
 
 isIncome – true if the payment is income, false if expense
 
-isSafing – optional flag for special cases (default false)
+isSaving – optional flag for special cases (default false)
 
 **#### PaymentDao – CRUD Operations**
 

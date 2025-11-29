@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:hive_flutter/hive_flutter.dart';
 import '../models/payment.dart';
+import '../data/local/payment_dao.dart';
 import 'add_payment_page.dart';
 
 class PaymentMonitoringPage extends StatefulWidget {
@@ -11,73 +11,86 @@ class PaymentMonitoringPage extends StatefulWidget {
 }
 
 class _PaymentMonitoringPageState extends State<PaymentMonitoringPage> {
+  final PaymentDao _dao = PaymentDao();
   final List<Payment> _payments = [];
-  late final Box _paymentsBox;
 
   @override
   void initState() {
     super.initState();
-    _paymentsBox = Hive.box('payments');
-    _initData();
+    _loadPayments();
   }
 
-  Future<void> _initData() async {
-    if (_paymentsBox.isEmpty) {
-      final examples = _exampleData();
-      for (final p in examples) {
-        _paymentsBox.add(p.toMap());
-      }
+  Future<void> _loadPayments() async {
+    final payments = await _dao.getAllPayments();
+    if (payments.isEmpty) {
+      await _insertExampleData();
+      final paymentsAfterInsert = await _dao.getAllPayments();
+      setState(() {
+        _payments.addAll(paymentsAfterInsert);
+      });
+    } else {
+      setState(() {
+        _payments.addAll(payments);
+      });
     }
-    _loadPaymentsFromHive();
   }
 
-  List<Payment> _exampleData() {
-    return [
+  Future<void> _insertExampleData() async {
+    final examples = [
       Payment(
-        id: '1',
+        id: DateTime.now().millisecondsSinceEpoch.toString(),
         amount: 25000,
-        category: 'Mini Lavash',
+        category: Category.food,
         note: 'Lunch with homies',
         date: DateTime.now().subtract(const Duration(hours: 2)),
         isIncome: false,
+        isSaving: false,
       ),
       Payment(
-        id: '2',
+        id: (DateTime.now().millisecondsSinceEpoch + 1).toString(),
         amount: 1700,
-        category: 'Transport',
+        category: Category.transport,
         note: 'Bus card',
         date: DateTime.now().subtract(const Duration(days: 1)),
         isIncome: false,
+        isSaving: false,
       ),
       Payment(
-        id: '3',
+        id: (DateTime.now().millisecondsSinceEpoch + 2).toString(),
         amount: 200000,
-        category: 'Allowance',
+        category: Category.other,
         note: 'Weekly allowance',
         date: DateTime.now().subtract(const Duration(days: 3)),
         isIncome: true,
+        isSaving: false,
       ),
     ];
+
+    for (final p in examples) {
+      await _dao.insertPayment(p);
+    }
   }
 
-  void _loadPaymentsFromHive() {
-    _payments.clear();
-    for (final value in _paymentsBox.values) {
-      if (value is Map) {
-        final map = Map<String, dynamic>.from(value as Map);
-        _payments.add(Payment.fromMap(map));
-      }
+  Future<void> _openAddPaymentPage() async {
+    final result = await Navigator.of(context).push<Payment>(
+      MaterialPageRoute(
+        builder: (context) => const AddPaymentPage(),
+      ),
+    );
+
+    if (result != null) {
+      await _dao.insertPayment(result);
+      setState(() {
+        _payments.insert(0, result);
+      });
     }
-    setState(() {});
   }
 
   double get _totalThisMonth {
     final now = DateTime.now();
     return _payments
         .where((p) =>
-    p.date.year == now.year &&
-        p.date.month == now.month &&
-        !p.isIncome)
+    p.date.year == now.year && p.date.month == now.month && !p.isIncome)
         .fold(0, (sum, p) => sum + p.amount);
   }
 
@@ -90,21 +103,6 @@ class _PaymentMonitoringPageState extends State<PaymentMonitoringPage> {
         p.date.day == now.day &&
         !p.isIncome)
         .fold(0, (sum, p) => sum + p.amount);
-  }
-
-  Future<void> _openAddPaymentPage() async {
-    final result = await Navigator.of(context).push<Payment>(
-      MaterialPageRoute(
-        builder: (context) => const AddPaymentPage(),
-      ),
-    );
-
-    if (result != null) {
-      _paymentsBox.add(result.toMap());
-      setState(() {
-        _payments.add(result);
-      });
-    }
   }
 
   @override
@@ -238,7 +236,7 @@ class _PaymentMonitoringPageState extends State<PaymentMonitoringPage> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  payment.category,
+                  payment.category.name,
                   style: const TextStyle(
                     color: Colors.white,
                     fontWeight: FontWeight.w600,
