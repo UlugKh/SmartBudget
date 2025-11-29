@@ -28,7 +28,7 @@ class AppDatabase {
     );
   }
 
-  Future<void> _onCreate(Database db, int version) async {  //runs only when first created
+  Future<void> _onCreate(Database db, int version) async { //runs only when first created
     await db.execute('''
     CREATE TABLE payments (
       id TEXT PRIMARY KEY,
@@ -42,6 +42,7 @@ class AppDatabase {
     ''');
     //Add all of the table creations (first time) SQL above ^
   }
+
 
   Future<void> _onUpgrade(Database db, int oldV, int newV) async {
     //for future migrations
