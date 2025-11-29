@@ -57,11 +57,19 @@ class PaymentProvider with ChangeNotifier {
       _payments.addAll(fromDb);
     }
 
+    // ensure newest-first in memory
+    _sortPayments();
+
     // Mark provider as initialized (not loading anymore)
     _initialized = true;
 
     // Notify all listeners (widgets) that data is ready / updated
     notifyListeners();
+  }
+
+  void _sortPayments() {
+    // Newest first
+    _payments.sort((a, b) => b.date.compareTo(a.date));
   }
 
   /// Public read-only view of payments.
@@ -85,6 +93,9 @@ class PaymentProvider with ChangeNotifier {
 
     // Update in-memory cache
     _payments.add(payment);
+
+    // Keep list newest-first
+    _sortPayments();
 
     // Trigger UI rebuild
     notifyListeners();

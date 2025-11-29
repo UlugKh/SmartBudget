@@ -265,7 +265,7 @@ class _AddPaymentPageState extends State<AddPaymentPage> {
                     itemBuilder: (context, index) {
                       // Show newest first by reversing the list order
                       final p =
-                      payments[payments.length - 1 - index];
+                      payments[index];
 
                       return Container(
                         padding: const EdgeInsets.all(12),
