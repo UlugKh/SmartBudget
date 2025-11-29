@@ -37,10 +37,10 @@ class AppDatabase {
       note TEXT,
       date TEXT NOT NULL,
       isIncome INTEGER NOT NULL,
-      isSafing INTEGER NOT NULL
-    )
-  ''');
-    ////Add all of the table creations (first time) SQL above ^
+      isSaving INTEGER NOT NULL
+    );   
+    ''');
+    //Add all of the table creations (first time) SQL above ^
   }
 
 
