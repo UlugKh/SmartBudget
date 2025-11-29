@@ -1,10 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+
 import 'package:smart_budget/app_shell.dart';
-import 'package:smart_budget/pages/about.dart';
-import 'package:smart_budget/pages/add_payment_page.dart';
-import 'package:smart_budget/pages/dashboard_page.dart';
+import 'package:smart_budget/providers/payment_provider.dart';
 
 void main() {
+  WidgetsFlutterBinding.ensureInitialized();
   runApp(const MainApp());
 }
 
@@ -13,10 +14,12 @@ class MainApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      debugShowCheckedModeBanner: false,
-      home: Scaffold(
-        body: AppShell(),
+    return ChangeNotifierProvider(
+      // This creates a single PaymentProvider instance for the whole app
+      create: (_) => PaymentProvider(),
+      child: MaterialApp(
+        debugShowCheckedModeBanner: false,
+        home: const AppShell(), // no need for extra Scaffold here
       ),
     );
   }

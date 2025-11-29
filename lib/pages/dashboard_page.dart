@@ -3,14 +3,14 @@ import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
 import '../providers/payment_provider.dart';
 import '../models/payment.dart';
-import 'add_payment_page.dart';
+import 'reports.dart';
 
 /// DashboardPage
 ///
 /// It shows:
 ///  - Total expenses (sum of all non-income payments)
 ///  - A list of all recent payments
-///  - A "+" button to add new payments
+///  - A floating button to quickly open the Reports screen
 ///
 /// The data comes from **PaymentProvider**, which loads from SQLite.
 class DashboardPage extends StatelessWidget {
@@ -95,9 +95,7 @@ class DashboardPage extends StatelessWidget {
                     : ListView.builder(
                   itemCount: payments.length,
                   itemBuilder: (context, index) {
-                    // Reverse index to display newest at the top
-                    final payment =
-                    payments[payments.length - 1 - index];
+                    final payment = payments[index];
 
                     return ListTile(
                       leading: CircleAvatar(
@@ -114,7 +112,7 @@ class DashboardPage extends StatelessWidget {
                         DateFormat.yMd().format(payment.date),
                       ),
 
-                      // Amount (for now: always treated as expense)
+                      // Amount (expense red, income green)
                       trailing: Text(
                         payment.isIncome
                             ? '+\$${payment.amount.toStringAsFixed(2)}'
@@ -137,18 +135,18 @@ class DashboardPage extends StatelessWidget {
 
       // ---------------------------
       //   FLOATING ACTION BUTTON
+      //   (opens Reports screen)
       // ---------------------------
       floatingActionButton: FloatingActionButton(
         onPressed: () {
-          /// Opens AddPaymentPage as a new route.
-          /// (Different from the Add tab which shows it directly)
+          /// Opens ReportsScreen as a new route.
           Navigator.of(context).push(
             MaterialPageRoute(
-              builder: (context) => const AddPaymentPage(),
+              builder: (context) => const ReportsScreen(),
             ),
           );
         },
-        child: const Icon(Icons.add),
+        child: const Icon(Icons.insights_outlined),
       ),
     );
   }
