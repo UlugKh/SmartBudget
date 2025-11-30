@@ -26,6 +26,9 @@ class _AddPaymentPageState extends State<AddPaymentPage> {
   /// Currently selected category, defaults to "food"
   Category _selectedCategory = Category.food;
 
+  /// Whether the payment is an income
+  bool _isIncome = false;
+
   @override
   void dispose() {
     // Clean up controllers to avoid memory leaks
@@ -89,7 +92,7 @@ class _AddPaymentPageState extends State<AddPaymentPage> {
       category: _selectedCategory,
       note: _noteController.text.trim(),
       date: _selectedDate!,
-      isIncome: false, // this page is for expenses only
+      isIncome: _isIncome,
       isSaving: false,
     );
 
@@ -98,8 +101,10 @@ class _AddPaymentPageState extends State<AddPaymentPage> {
     //  - insert it into SQLite via PaymentDao
     //  - update the in-memory list
     //  - notify listeners so UI updates
-    await Provider.of<PaymentProvider>(context, listen: false)
-        .addPayment(payment);
+    await Provider.of<PaymentProvider>(
+      context,
+      listen: false,
+    ).addPayment(payment);
 
     // Important: we DO NOT pop the page.
     // This page is used as a bottom-nav tab, not as a pushed route,
@@ -112,12 +117,14 @@ class _AddPaymentPageState extends State<AddPaymentPage> {
     _amountController.clear();
     setState(() {
       _selectedDate = null;
+      _selectedDate = null;
       _selectedCategory = Category.food;
+      _isIncome = false;
     });
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Payment saved')),
-    );
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(const SnackBar(content: Text('Payment saved')));
   }
 
   @override
@@ -128,8 +135,9 @@ class _AddPaymentPageState extends State<AddPaymentPage> {
       // loads data from DB or adds new payments, this widget rebuilds.
       body: Consumer<PaymentProvider>(
         builder: (context, provider, _) {
-          final payments = provider.payments;   // all payments in memory
-          final isLoading = provider.isLoading; // whether initial load is still running
+          final payments = provider.payments; // all payments in memory
+          final isLoading =
+              provider.isLoading; // whether initial load is still running
 
           return SingleChildScrollView(
             padding: const EdgeInsets.fromLTRB(16, 24, 16, 16),
@@ -183,6 +191,21 @@ class _AddPaymentPageState extends State<AddPaymentPage> {
 
                 const SizedBox(height: 16),
 
+                // Is Income Checkbox
+                CheckboxListTile(
+                  title: const Text("Is Income?"),
+                  value: _isIncome,
+                  onChanged: (val) {
+                    setState(() {
+                      _isIncome = val ?? false;
+                    });
+                  },
+                  controlAffinity: ListTileControlAffinity.leading,
+                  contentPadding: EdgeInsets.zero,
+                ),
+
+                const SizedBox(height: 16),
+
                 // Category dropdown + buttons
                 Row(
                   children: [
@@ -192,10 +215,10 @@ class _AddPaymentPageState extends State<AddPaymentPage> {
                       items: Category.values
                           .map(
                             (category) => DropdownMenuItem(
-                          value: category,
-                          child: Text(category.name.toUpperCase()),
-                        ),
-                      )
+                              value: category,
+                              child: Text(category.name.toUpperCase()),
+                            ),
+                          )
                           .toList(),
                       onChanged: (value) {
                         if (value == null) return;
@@ -220,6 +243,7 @@ class _AddPaymentPageState extends State<AddPaymentPage> {
                           setState(() {
                             _selectedDate = null;
                             _selectedCategory = Category.food;
+                            _isIncome = false;
                           });
                         }
                       },
@@ -236,13 +260,9 @@ class _AddPaymentPageState extends State<AddPaymentPage> {
                 const SizedBox(height: 32),
 
                 // --- EXISTING PAYMENTS LIST (from DB via provider) ---
-
                 const Text(
                   'Existing Payments',
-                  style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.w700,
-                  ),
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700),
                 ),
                 const SizedBox(height: 12),
 
@@ -264,8 +284,7 @@ class _AddPaymentPageState extends State<AddPaymentPage> {
                     separatorBuilder: (_, __) => const SizedBox(height: 8),
                     itemBuilder: (context, index) {
                       // Show newest first by reversing the list order
-                      final p =
-                      payments[index];
+                      final p = payments[index];
 
                       return Container(
                         padding: const EdgeInsets.all(12),
@@ -300,12 +319,14 @@ class _AddPaymentPageState extends State<AddPaymentPage> {
                               ),
                             ),
                             const SizedBox(width: 8),
-                            // Right: amount (currently shown as expense with - sign)
+                            // Right: amount
                             Text(
-                              '-\$${p.amount.toStringAsFixed(2)}',
-                              style: const TextStyle(
+                              p.isIncome
+                                  ? '+\$${p.amount.toStringAsFixed(2)}'
+                                  : '-\$${p.amount.toStringAsFixed(2)}',
+                              style: TextStyle(
                                 fontWeight: FontWeight.bold,
-                                color: Colors.red,
+                                color: p.isIncome ? Colors.green : Colors.red,
                               ),
                             ),
                           ],
