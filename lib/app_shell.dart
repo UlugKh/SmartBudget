@@ -2,15 +2,16 @@ import 'package:flutter/material.dart';
 
 import 'package:smart_budget/pages/about.dart';
 import 'package:smart_budget/pages/add_payment_page.dart';
-import 'package:smart_budget/pages/dashboard_page.dart';
 import 'package:smart_budget/pages/gamification_page.dart';
 import 'package:smart_budget/pages/home.dart';
 
 import 'package:smart_budget/util/appbar.dart';
 
-
 class AppShell extends StatefulWidget {
-  const AppShell({super.key, this.startIndex = 0}); //start index at 0 = home page
+  const AppShell({
+    super.key,
+    this.startIndex = 0,
+  }); //start index at 0 = home page
   final int startIndex;
 
   @override
@@ -22,7 +23,6 @@ class _AppShellState extends State<AppShell> {
 
   final _pages = const [
     HomePage(),
-    DashboardPage(),
     AddPaymentPage(),
     GamificationPage(),
     AboutPage(),
@@ -43,10 +43,7 @@ class _AppShellState extends State<AppShell> {
   Widget build(BuildContext context) {
     return Scaffold(
       //IndexedStack is a stack of all pages, but only one is shown based on the current index state
-      body: IndexedStack(
-        index: _index,
-        children: _pages,
-      ),
+      body: IndexedStack(index: _index, children: _pages),
       bottomNavigationBar: AppBottomNavBar(
         currentIndex: _index,
         onTap: _onNavTap,
