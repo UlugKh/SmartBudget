@@ -9,7 +9,7 @@ import '../data/local/payment_dao.dart';
 ///  - Loads payments from SQLite on startup (through PaymentDao)
 ///  - Seeds dummy data into the DB the very first time (if table is empty)
 ///  - Exposes a list of payments to the UI
-///  - Allows adding, updating, deleting payments (and writes them to SQLite)
+///  - Allows adding new payments (and writes them to SQLite)
 ///  - Calculates totals (e.g. totalExpenses, totals per category)
 ///
 /// All widgets that use [Consumer<PaymentProvider>] will automatically
@@ -81,16 +81,11 @@ class PaymentProvider with ChangeNotifier {
   /// True while loading initial data from the database.
   bool get isLoading => !_initialized;
 
-  // ---------------------------------------------------------------------------
-  // CREATE
-  // ---------------------------------------------------------------------------
-
   /// Add a new payment.
   ///
   /// This:
   ///  - Inserts it into SQLite via [PaymentDao.insertPayment]
   ///  - Adds it to the in-memory list
-  ///  - Keeps list sorted newest-first
   ///  - Notifies listeners so UI updates immediately
   Future<void> addPayment(Payment payment) async {
     // Persist to SQLite
@@ -106,28 +101,13 @@ class PaymentProvider with ChangeNotifier {
     notifyListeners();
   }
 
-  // ---------------------------------------------------------------------------
-  // READ (helpers)
-  // ---------------------------------------------------------------------------
-
-  /// Find a single payment by id from the in-memory list.
-  ///
-  /// Returns null if not found. Useful for detail / edit screens.
-  Payment? getPaymentById(String id) {
-    try {
-      return _payments.firstWhere((p) => p.id == id);
-    } catch (_) {
-      return null;
-    }
-  }
-
   /// Total expenses (sum of amounts where isIncome == false).
   ///
   /// This is used by the Dashboard summary card and can be reused
   /// anywhere we need a "total spent" number.
   double get totalExpenses {
     return _payments
-        .where((p) => !p.isIncome) // only expenses
+        .where((p) => !p.isIncome)                // only expenses
         .fold(0.0, (sum, item) => sum + item.amount);
   }
 
@@ -141,96 +121,13 @@ class PaymentProvider with ChangeNotifier {
     final Map<Category, double> totals = {};
     for (var payment in _payments.where((p) => !p.isIncome)) {
       if (totals.containsKey(payment.category)) {
-        totals[payment.category] =
-            totals[payment.category]! + payment.amount;
+        totals[payment.category] = totals[payment.category]! + payment.amount;
       } else {
         totals[payment.category] = payment.amount;
       }
     }
     return totals;
   }
-
-  /// Total expenses for the current month.
-  double get totalExpensesCurrentMonth {
-    final now = DateTime.now();
-    return _payments
-        .where(
-          (p) =>
-      !p.isIncome &&
-          p.date.year == now.year &&
-          p.date.month == now.month,
-    )
-        .fold(0.0, (sum, item) => sum + item.amount);
-  }
-
-  /// Top spending category for the current month.
-  MapEntry<Category, double>? get topCategoryCurrentMonth {
-    final now = DateTime.now();
-    final expenses = _payments.where(
-          (p) =>
-      !p.isIncome && p.date.year == now.year && p.date.month == now.month,
-    );
-
-    if (expenses.isEmpty) return null;
-
-    final Map<Category, double> totals = {};
-    for (var p in expenses) {
-      totals[p.category] = (totals[p.category] ?? 0) + p.amount;
-    }
-
-    final sorted = totals.entries.toList()
-      ..sort((a, b) => b.value.compareTo(a.value));
-    return sorted.first;
-  }
-
-  // ---------------------------------------------------------------------------
-  // UPDATE
-  // ---------------------------------------------------------------------------
-
-  /// Update an existing payment.
-  ///
-  /// This:
-  ///  - Updates the row in SQLite via [PaymentDao.updatePayment]
-  ///  - Updates the in-memory list
-  ///  - Keeps list sorted newest-first
-  ///  - Notifies listeners so UI updates immediately
-  Future<void> updatePayment(Payment updated) async {
-    // 1) Update in DB
-    await _dao.updatePayment(updated);
-
-    // 2) Update in-memory entry
-    final index = _payments.indexWhere((p) => p.id == updated.id);
-    if (index != -1) {
-      _payments[index] = updated;
-      _sortPayments();
-      notifyListeners();
-    }
-  }
-
-  // ---------------------------------------------------------------------------
-  // DELETE
-  // ---------------------------------------------------------------------------
-
-  /// Delete a payment by id.
-  ///
-  /// This:
-  ///  - Deletes the row from SQLite via [PaymentDao.deletePayment]
-  ///  - Removes it from the in-memory list
-  ///  - Notifies listeners so UI updates immediately
-  Future<void> deletePayment(String id) async {
-    // 1) Delete from DB
-    await _dao.deletePayment(id);
-
-    // 2) Remove from in-memory list
-    _payments.removeWhere((p) => p.id == id);
-
-    // 3) Notify UI
-    notifyListeners();
-  }
-
-  // ---------------------------------------------------------------------------
-  // DUMMY DATA (first run)
-  // ---------------------------------------------------------------------------
 
   /// Creates some example payments for first run.
   ///

@@ -170,13 +170,13 @@ class AboutPage extends StatelessWidget {
               _FeatureTile(
                 icon: Icons.category_rounded,
                 title: "Categories",
-                subtitle: "Helps save",
+                subtitle: "Categorizations help save",
                 tint: Color(0xFFF1F1F1),
               ),
               _FeatureTile(
                 icon: Icons.emoji_events_rounded,
                 title: "Badges",
-                subtitle: "Saving rewards",
+                subtitle: "Rewards for saving goals",
                 tint: _goldSoft,
               ),
               _FeatureTile(
