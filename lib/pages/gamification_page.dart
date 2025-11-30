@@ -28,10 +28,9 @@ class _GamificationPageState extends State<GamificationPage> {
   void initState() {
     super.initState();
     _initBadges();
-    _loadMonthlyGoal(); // only goal target comes from DB now
+    _loadMonthlyGoal();
   }
 
-  // ----------------- BADGES SETUP -----------------
   void _initBadges() {
     _badgeDefinitions = const [
       Badge(
@@ -91,7 +90,6 @@ class _GamificationPageState extends State<GamificationPage> {
     ];
   }
 
-  // ----------------- LOAD GOAL TARGET FROM DB -----------------
   Future<void> _loadMonthlyGoal() async {
     setState(() {
       _isLoading = true;
@@ -106,7 +104,7 @@ class _GamificationPageState extends State<GamificationPage> {
       setState(() {
         _monthlyGoal = MonthlyGoal(
           targetAmount: target,
-          currentSavings: 0.0, // will be computed from payments
+          currentSavings: 0.0,
         );
         _isLoading = false;
       });
@@ -120,7 +118,6 @@ class _GamificationPageState extends State<GamificationPage> {
     }
   }
 
-  // ----------------- COMPUTE SAVINGS FROM PROVIDER -----------------
   double _calculateCurrentMonthSavings(List<Payment> payments) {
     final now = DateTime.now();
     double income = 0.0;
@@ -139,60 +136,75 @@ class _GamificationPageState extends State<GamificationPage> {
     return income - expenses;
   }
 
-  // ----------------- EDIT GOAL -----------------
   void _showEditGoalDialog(double currentSavings) {
     final controller = TextEditingController(
       text: _monthlyGoal.targetAmount.toStringAsFixed(0),
     );
 
-
     showDialog(
       context: context,
       builder: (context) {
-        return AlertDialog(
-          title: const Text('Set Monthly Goal'),
-          content: TextField(
-            controller: controller,
-            keyboardType:
-            const TextInputType.numberWithOptions(decimal: true),
-            decoration: const InputDecoration(
-              labelText: 'Target Amount (\$)',
-              border: OutlineInputBorder(),
-            ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text('Cancel'),
-            ),
-            ElevatedButton(
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.blue,
-                foregroundColor: Colors.white,
-              ),
-              onPressed: () async {
-                final newGoal = double.tryParse(controller.text);
-                if (newGoal != null && newGoal > 0) {
-                  final now = DateTime.now();
-                  final goalDao = GoalDao();
-                  await goalDao.setMonthlyGoal(now, newGoal);
+        String? errorText;
 
-                  setState(() {
-                    _monthlyGoal = MonthlyGoal(
-                      targetAmount: newGoal,
-                      currentSavings: currentSavings,
-                    );
-                  });
-                }
-                Navigator.pop(context);
-              },
-              child: const Text('Save'),
-            ),
-          ],
+        return StatefulBuilder(
+          builder: (context, setStateDialog) {
+            return AlertDialog(
+              title: const Text('Set Monthly Goal'),
+              content: TextField(
+                controller: controller,
+                keyboardType:
+                const TextInputType.numberWithOptions(decimal: false),
+                decoration: InputDecoration(
+                  labelText: 'Target Amount',
+                  border: const OutlineInputBorder(),
+                  errorText: errorText,
+                ),
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(context),
+                  child: const Text('Cancel'),
+                ),
+                ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.blue,
+                    foregroundColor: Colors.white,
+                  ),
+                  onPressed: () async {
+                    final text = controller.text.trim();
+
+                    final newGoal = double.tryParse(text);
+
+                    if (newGoal == null || newGoal <= 0) {
+                      setStateDialog(() {
+                        errorText = 'Please enter a positive number';
+                      });
+                      return;
+                    }
+
+                    final now = DateTime.now();
+                    final goalDao = GoalDao();
+                    await goalDao.setMonthlyGoal(now, newGoal);
+
+                    setState(() {
+                      _monthlyGoal = MonthlyGoal(
+                        targetAmount: newGoal,
+                        currentSavings: currentSavings,
+                      );
+                    });
+
+                    Navigator.pop(context);
+                  },
+                  child: const Text('Save'),
+                ),
+              ],
+            );
+          },
         );
       },
     );
   }
+
 
   @override
   Widget build(BuildContext context) {
@@ -213,11 +225,9 @@ class _GamificationPageState extends State<GamificationPage> {
             ? Center(child: Text(_error!))
             : Consumer<PaymentProvider>(
             builder: (context, provider, _) {
-              // live data from provider
               final savings =
               _calculateCurrentMonthSavings(provider.payments);
 
-              // evaluate badges every time payments / savings change
               final badges = evaluateBadges(
                 currentSavings: savings,
                 definitions: _badgeDefinitions,
@@ -275,7 +285,6 @@ class _GamificationPageState extends State<GamificationPage> {
   }
 }
 
-// ----------------- UI WIDGETS BELOW (unchanged) -----------------
 
 class SavingsGoalCard extends StatelessWidget {
   final double targetAmount;
