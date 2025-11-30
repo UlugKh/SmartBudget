@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import 'package:smart_budget/pages/about.dart';
 import 'package:smart_budget/pages/add_payment_page.dart';
+import 'package:smart_budget/pages/monitoring_page.dart';
 import 'package:smart_budget/pages/gamification_page.dart';
 import 'package:smart_budget/pages/home.dart';
 
@@ -23,6 +24,7 @@ class _AppShellState extends State<AppShell> {
 
   final _pages = const [
     HomePage(),
+    MonitoringPage(),
     AddPaymentPage(),
     GamificationPage(),
     AboutPage(),

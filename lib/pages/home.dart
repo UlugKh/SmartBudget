@@ -3,8 +3,9 @@ import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
 import 'package:smart_budget/providers/payment_provider.dart';
 import 'package:smart_budget/models/payment.dart';
-import 'package:smart_budget/pages/reports.dart';
+
 import 'package:smart_budget/pages/add_payment_page.dart';
+import 'package:smart_budget/pages/monitoring_page.dart';
 
 class HomePage extends StatelessWidget {
   const HomePage({super.key});
@@ -216,7 +217,7 @@ class HomePage extends StatelessWidget {
                             Navigator.push(
                               context,
                               MaterialPageRoute(
-                                builder: (context) => const ReportsScreen(),
+                                builder: (context) => const MonitoringPage(),
                               ),
                             );
                           },
