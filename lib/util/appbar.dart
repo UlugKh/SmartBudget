@@ -24,7 +24,7 @@ class AppBottomNavBar extends StatelessWidget {
     required this.onTap,
     this.iconColor = const Color(0xFF222222),
     this.labelStyle,
-    this.height = 70,
+    this.height = 100,
     this.backgroundColor = Colors.white,
   });
 
@@ -150,19 +150,22 @@ class _NavItem extends StatelessWidget {
         onTap: () => onTap(index),
         radius: 28,
         child: Padding(
-          padding: const EdgeInsets.symmetric(vertical: 8),
+          padding: const EdgeInsets.symmetric(vertical: 6),
           child: Column(
+            mainAxisSize: MainAxisSize.min,
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               Icon(
                 icon,
-                size: iconSize,
+                size: iconSize - 2,
                 color: iconColor, // same for all, as requested
               ),
-              const SizedBox(height: 4),
+              const SizedBox(height: 2),
               Text(
                 label,
                 style: labelStyle.copyWith(
+                  fontSize: (labelStyle.fontSize ?? 11) - 0.5, 
+                  height: 1.0,
                   color: labelStyle.color, // keep consistent
                   fontWeight: isSelected
                       ? FontWeight.w700

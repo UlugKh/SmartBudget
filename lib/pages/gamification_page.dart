@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart' hide Badge;
+import 'package:provider/provider.dart';
+
 import '../models/badge.dart';
 import '../models/monthly_goal.dart';
 import '../logic/badge_logic.dart';
 import '../models/payment.dart';
-import '../data/local/payment_dao.dart';
-
+import '../data/local/goal_dao.dart';
+import '../providers/payment_provider.dart';
 
 class GamificationPage extends StatefulWidget {
   const GamificationPage({super.key});
@@ -15,10 +17,9 @@ class GamificationPage extends StatefulWidget {
 
 class _GamificationPageState extends State<GamificationPage> {
   MonthlyGoal _monthlyGoal =
-  const MonthlyGoal(targetAmount: 500.0, currentSavings: 350.0);
+  const MonthlyGoal(targetAmount: 0.0, currentSavings: 0.0);
 
   late final List<Badge> _badgeDefinitions;
-  List<Badge> _badges = [];
 
   bool _isLoading = true;
   String? _error;
@@ -27,12 +28,12 @@ class _GamificationPageState extends State<GamificationPage> {
   void initState() {
     super.initState();
     _initBadges();
-    _loadGamificationData();
+    _loadMonthlyGoal();
   }
 
   void _initBadges() {
-    _badgeDefinitions = [
-      const Badge(
+    _badgeDefinitions = const [
+      Badge(
         id: 1,
         name: 'Stone',
         description: 'Start your journey: Save \$50',
@@ -41,7 +42,7 @@ class _GamificationPageState extends State<GamificationPage> {
         isUnlocked: false,
         progress: 0.0,
       ),
-      const Badge(
+      Badge(
         id: 2,
         name: 'Silver',
         description: 'Getting serious: Save \$100',
@@ -50,7 +51,7 @@ class _GamificationPageState extends State<GamificationPage> {
         isUnlocked: false,
         progress: 0.0,
       ),
-      const Badge(
+      Badge(
         id: 3,
         name: 'Gold',
         description: 'Big steps: Save \$500',
@@ -59,7 +60,7 @@ class _GamificationPageState extends State<GamificationPage> {
         isUnlocked: false,
         progress: 0.0,
       ),
-      const Badge(
+      Badge(
         id: 4,
         name: 'Diamond',
         description: 'Expert saver: Save \$1,000',
@@ -68,7 +69,7 @@ class _GamificationPageState extends State<GamificationPage> {
         isUnlocked: false,
         progress: 0.0,
       ),
-      const Badge(
+      Badge(
         id: 5,
         name: 'Platinum',
         description: 'Elite status: Save \$5,000',
@@ -77,7 +78,7 @@ class _GamificationPageState extends State<GamificationPage> {
         isUnlocked: false,
         progress: 0.0,
       ),
-      const Badge(
+      Badge(
         id: 6,
         name: 'Master',
         description: 'Legendary: Save \$10,000',
@@ -89,7 +90,7 @@ class _GamificationPageState extends State<GamificationPage> {
     ];
   }
 
-  Future<void> _loadGamificationData() async {
+  Future<void> _loadMonthlyGoal() async {
     setState(() {
       _isLoading = true;
       _error = null;
@@ -97,52 +98,45 @@ class _GamificationPageState extends State<GamificationPage> {
 
     try {
       final now = DateTime.now();
-      final yearMonth =
-          '${now.year.toString().padLeft(4, '0')}-${now.month.toString().padLeft(2, '0')}';
-
-      final dao = PaymentDao();
-      final List<Payment> payments =
-      await dao.getPaymentsByMonth(yearMonth);
-
-      double savings = 0;
-
-      for (final p in payments) {
-        if (p.isIncome) {
-          savings += p.amount;
-        } else {
-          savings -= p.amount;
-        }
-      }
-
-      final updatedGoal = MonthlyGoal(
-        targetAmount: _monthlyGoal.targetAmount,
-        currentSavings: savings,
-      );
-
-      final evaluatedBadges = evaluateBadges(
-        currentSavings: savings,
-        definitions: _badgeDefinitions,
-      );
+      final goalDao = GoalDao();
+      final target = await goalDao.getMonthlyGoal(now);
 
       setState(() {
-        _monthlyGoal = updatedGoal;
-        _badges = evaluatedBadges;
+        _monthlyGoal = MonthlyGoal(
+          targetAmount: target,
+          currentSavings: 0.0,
+        );
         _isLoading = false;
       });
     } catch (e, stack) {
-      print('Gamification error: $e');
-      print(stack);
+      debugPrint('Gamification goal load error: $e');
+      debugPrint(stack.toString());
       setState(() {
-      _error = e.toString();
-      _isLoading = false;
+        _error = e.toString();
+        _isLoading = false;
       });
     }
   }
 
+  double _calculateCurrentMonthSavings(List<Payment> payments) {
+    final now = DateTime.now();
+    double income = 0.0;
+    double expenses = 0.0;
 
+    for (final p in payments) {
+      if (p.date.year == now.year && p.date.month == now.month) {
+        if (p.isIncome) {
+          income += p.amount;
+        } else {
+          expenses += p.amount;
+        }
+      }
+    }
 
+    return income - expenses;
+  }
 
-  void _showEditGoalDialog() {
+  void _showEditGoalDialog(double currentSavings) {
     final controller = TextEditingController(
       text: _monthlyGoal.targetAmount.toStringAsFixed(0),
     );
@@ -150,115 +144,147 @@ class _GamificationPageState extends State<GamificationPage> {
     showDialog(
       context: context,
       builder: (context) {
-        return AlertDialog(
-          title: const Text('Set Monthly Goal'),
-          content: TextField(
-            controller: controller,
-            keyboardType:
-            const TextInputType.numberWithOptions(decimal: true),
-            decoration: const InputDecoration(
-              labelText: 'Target Amount (\$)',
-              border: OutlineInputBorder(),
-            ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text('Cancel'),
-            ),
-            ElevatedButton(
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.blue,
-                foregroundColor: Colors.white,
+        String? errorText;
+
+        return StatefulBuilder(
+          builder: (context, setStateDialog) {
+            return AlertDialog(
+              title: const Text('Set Monthly Goal'),
+              content: TextField(
+                controller: controller,
+                keyboardType:
+                const TextInputType.numberWithOptions(decimal: false),
+                decoration: InputDecoration(
+                  labelText: 'Target Amount',
+                  border: const OutlineInputBorder(),
+                  errorText: errorText,
+                ),
               ),
-              onPressed: () {
-                final newGoal = double.tryParse(controller.text);
-                if (newGoal != null && newGoal > 0) {
-                  setState(() {
-                    _monthlyGoal = MonthlyGoal(
-                      targetAmount: newGoal,
-                      currentSavings: _monthlyGoal.currentSavings,
-                    );
-                    _badges = evaluateBadges(
-                      currentSavings: _monthlyGoal.currentSavings,
-                      definitions: _badgeDefinitions,
-                    );
-                  });
-                }
-                Navigator.pop(context);
-              },
-              child: const Text('Save'),
-            ),
-          ],
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(context),
+                  child: const Text('Cancel'),
+                ),
+                ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.blue,
+                    foregroundColor: Colors.white,
+                  ),
+                  onPressed: () async {
+                    final text = controller.text.trim();
+
+                    final newGoal = double.tryParse(text);
+
+                    if (newGoal == null || newGoal <= 0) {
+                      setStateDialog(() {
+                        errorText = 'Please enter a positive number';
+                      });
+                      return;
+                    }
+
+                    final now = DateTime.now();
+                    final goalDao = GoalDao();
+                    await goalDao.setMonthlyGoal(now, newGoal);
+
+                    setState(() {
+                      _monthlyGoal = MonthlyGoal(
+                        targetAmount: newGoal,
+                        currentSavings: currentSavings,
+                      );
+                    });
+
+                    Navigator.pop(context);
+                  },
+                  child: const Text('Save'),
+                ),
+              ],
+            );
+          },
         );
       },
     );
   }
 
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.blue[50],
-      appBar: AppBar(
-        title: const Text(
-          'Achievements',
-          style: TextStyle(fontWeight: FontWeight.bold),
+        backgroundColor: Colors.blue[50],
+        appBar: AppBar(
+          title: const Text(
+            'Achievements',
+            style: TextStyle(fontWeight: FontWeight.bold),
+          ),
+          centerTitle: true,
+          backgroundColor: Colors.transparent,
+          elevation: 0,
         ),
-        centerTitle: true,
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-      ),
-      body: _isLoading
-          ? const Center(child: CircularProgressIndicator())
-          : _error != null
-          ? Center(child: Text(_error!))
-          : SingleChildScrollView(
-        child: Padding(
-          padding: const EdgeInsets.all(16.0),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.center,
-            children: [
-              SavingsGoalCard(
-                targetAmount: _monthlyGoal.targetAmount,
-                currentAmount: _monthlyGoal.currentSavings,
-                onEditPressed: _showEditGoalDialog,
-              ),
-              const SizedBox(height: 30),
-              const Align(
-                alignment: Alignment.centerLeft,
-                child: Text(
-                  'Rank Badges',
-                  style: TextStyle(
-                    fontSize: 24,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.black87,
+        body: _isLoading
+            ? const Center(child: CircularProgressIndicator())
+            : _error != null
+            ? Center(child: Text(_error!))
+            : Consumer<PaymentProvider>(
+            builder: (context, provider, _) {
+              final savings =
+              _calculateCurrentMonthSavings(provider.payments);
+
+              final badges = evaluateBadges(
+                currentSavings: savings,
+                definitions: _badgeDefinitions,
+              );
+
+
+              return SingleChildScrollView(
+                child: Padding(
+                  padding: const EdgeInsets.all(16.0),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.center,
+                    children: [
+                      SavingsGoalCard(
+                        targetAmount: _monthlyGoal.targetAmount,
+                        currentAmount: savings,
+                        onEditPressed: () =>
+                            _showEditGoalDialog(savings),
+                      ),
+                      const SizedBox(height: 30),
+                      const Align(
+                        alignment: Alignment.centerLeft,
+                        child: Text(
+                          'Rank Badges',
+                          style: TextStyle(
+                            fontSize: 24,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.black87,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                      GridView.builder(
+                        shrinkWrap: true,
+                        physics:
+                        const NeverScrollableScrollPhysics(),
+                        gridDelegate:
+                        const SliverGridDelegateWithMaxCrossAxisExtent(
+                          maxCrossAxisExtent: 200,
+                          crossAxisSpacing: 16,
+                          mainAxisSpacing: 16,
+                          childAspectRatio: 1.0,
+                        ),
+                        itemCount: badges.length,
+                        itemBuilder: (context, index) {
+                          return BadgeTile(badge: badges[index]);
+                        },
+                      ),
+                    ],
                   ),
                 ),
-              ),
-              const SizedBox(height: 16),
-              GridView.builder(
-                shrinkWrap: true,
-                physics:
-                const NeverScrollableScrollPhysics(),
-                gridDelegate:
-                const SliverGridDelegateWithMaxCrossAxisExtent(
-                  maxCrossAxisExtent: 200,
-                  crossAxisSpacing: 16,
-                  mainAxisSpacing: 16,
-                  childAspectRatio: 1.0,
-                ),
-                itemCount: _badges.length,
-                itemBuilder: (context, index) {
-                  return BadgeTile(badge: _badges[index]);
-                },
-              ),
-            ],
-          ),
+              );
+            },
         ),
-      ),
     );
   }
 }
+
 
 class SavingsGoalCard extends StatelessWidget {
   final double targetAmount;
@@ -277,6 +303,7 @@ class SavingsGoalCard extends StatelessWidget {
     final double progressPercent = targetAmount > 0
         ? (currentAmount / targetAmount).clamp(0.0, 1.0)
         : 0.0;
+
 
     return Container(
       padding: const EdgeInsets.all(24),
@@ -377,6 +404,7 @@ class BadgeTile extends StatelessWidget {
   final Badge badge;
 
   const BadgeTile({super.key, required this.badge});
+
 
   @override
   Widget build(BuildContext context) {

@@ -1,5 +1,7 @@
 import 'package:sqflite/sqflite.dart';
 import 'package:path/path.dart';
+import 'package:sqflite_common_ffi/sqflite_ffi.dart'; // for databaseFactory in tests
+import 'package:flutter/foundation.dart'; // for test visibility (dont use in prod)
 
 class AppDatabase {
   AppDatabase._();  //private connection
@@ -38,11 +40,38 @@ class AppDatabase {
       date TEXT NOT NULL,
       isIncome INTEGER NOT NULL,
       isSaving INTEGER NOT NULL
-    );   
-    ''');
+    )
+  ''');
+
+    await db.execute('''
+    CREATE TABLE monthly_goals (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      year INTEGER NOT NULL,
+      month INTEGER NOT NULL,
+      target_amount REAL NOT NULL
+    )
+  ''');
     //Add all of the table creations (first time) SQL above ^
   }
 
+  // Test exclusive DB init for unit tests.
+  @visibleForTesting
+  Future<void> initForTest({bool inMemory = true}) async {
+    _db = await databaseFactory.openDatabase(
+      inMemory ? inMemoryDatabasePath : 'app_test.db',
+      options: OpenDatabaseOptions(
+        version: _dbVersion,
+        onCreate: _onCreate,
+        onUpgrade: _onUpgrade,
+      ),
+    );
+  }
+
+  // close function to avoid brittle tests
+  Future<void> close() async {
+    await _db?.close();
+    _db = null;
+  }
 
   Future<void> _onUpgrade(Database db, int oldV, int newV) async {
     //for future migrations
