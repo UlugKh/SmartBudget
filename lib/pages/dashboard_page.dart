@@ -1,9 +1,18 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import '../providers/expense_provider.dart';
-import '../models/expense.dart';
-import 'add_expense_page.dart';
+import 'package:intl/intl.dart';
+import '../providers/payment_provider.dart';
+import '../models/payment.dart';
+import 'reports.dart';
 
+/// DashboardPage
+///
+/// It shows:
+///  - Total expenses (sum of all non-income payments)
+///  - A list of all recent payments
+///  - A floating button to quickly open the Reports screen
+///
+/// The data comes from **PaymentProvider**, which loads from SQLite.
 class DashboardPage extends StatelessWidget {
   const DashboardPage({super.key});
 
@@ -11,14 +20,20 @@ class DashboardPage extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(title: const Text('SmartBudget Dashboard')),
-      body: Consumer<ExpenseProvider>(
+
+      /// Consumer listens to PaymentProvider.
+      /// Whenever payments are loaded from SQLite or updated,
+      /// this widget rebuilds automatically.
+      body: Consumer<PaymentProvider>(
         builder: (context, provider, child) {
-          final total = provider.totalExpenses;
-          final expenses = provider.expenses;
+          final total = provider.totalExpenses; // total spent (expenses only)
+          final payments = provider.payments;   // all payments from database
 
           return Column(
             children: [
-              // Summary Card
+              // ---------------------------
+              //   SUMMARY CARD
+              // ---------------------------
               Card(
                 margin: const EdgeInsets.all(16),
                 elevation: 4,
@@ -27,27 +42,34 @@ class DashboardPage extends StatelessWidget {
                   padding: const EdgeInsets.all(20),
                   child: Column(
                     children: [
+                      // Title label
                       Text(
-                        'Total Expenses',
+                        'Total Spent',
                         style: Theme.of(context).textTheme.titleMedium,
                       ),
                       const SizedBox(height: 10),
+
+                      // Total spent value
                       Text(
                         '\$${total.toStringAsFixed(2)}',
-                        style: Theme.of(context).textTheme.displayMedium
+                        style: Theme.of(context)
+                            .textTheme
+                            .displayMedium
                             ?.copyWith(
-                              fontWeight: FontWeight.bold,
-                              color: Theme.of(
-                                context,
-                              ).colorScheme.onPrimaryContainer,
-                            ),
+                          fontWeight: FontWeight.bold,
+                          color: Theme.of(context)
+                              .colorScheme
+                              .onPrimaryContainer,
+                        ),
                       ),
                     ],
                   ),
                 ),
               ),
 
-              // Recent Expenses Header
+              // ---------------------------
+              //    SECTION HEADER
+              // ---------------------------
               Padding(
                 padding: const EdgeInsets.symmetric(
                   horizontal: 16,
@@ -56,53 +78,80 @@ class DashboardPage extends StatelessWidget {
                 child: Align(
                   alignment: Alignment.centerLeft,
                   child: Text(
-                    'Recent Expenses',
+                    'Recent Payments',
                     style: Theme.of(context).textTheme.titleLarge,
                   ),
                 ),
               ),
 
-              // Expenses List
+              // ---------------------------
+              //    PAYMENT LIST
+              // ---------------------------
               Expanded(
-                child: expenses.isEmpty
-                    ? const Center(child: Text('No expenses yet!'))
+                child: payments.isEmpty
+                    ? const Center(child: Text('No payments yet!'))
+
+                /// Show newest-first list of payments
                     : ListView.builder(
-                        itemCount: expenses.length,
-                        itemBuilder: (context, index) {
-                          // Show newest first
-                          final expense = expenses[expenses.length - 1 - index];
-                          return ListTile(
-                            leading: CircleAvatar(
-                              child: Icon(_getCategoryIcon(expense.category)),
-                            ),
-                            title: Text(expense.title),
-                            subtitle: Text(expense.formattedDate),
-                            trailing: Text(
-                              '-\$${expense.amount.toStringAsFixed(2)}',
-                              style: const TextStyle(
-                                fontWeight: FontWeight.bold,
-                                color: Colors.red,
-                              ),
-                            ),
-                          );
-                        },
+                  itemCount: payments.length,
+                  itemBuilder: (context, index) {
+                    final payment = payments[index];
+
+                    return ListTile(
+                      leading: CircleAvatar(
+                        child: Icon(
+                          _getCategoryIcon(payment.category),
+                        ),
                       ),
+
+                      // Main text: note or description
+                      title: Text(payment.note),
+
+                      // Date of the payment
+                      subtitle: Text(
+                        DateFormat.yMd().format(payment.date),
+                      ),
+
+                      // Amount (expense red, income green)
+                      trailing: Text(
+                        payment.isIncome
+                            ? '+\$${payment.amount.toStringAsFixed(2)}'
+                            : '-\$${payment.amount.toStringAsFixed(2)}',
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          color: payment.isIncome
+                              ? Colors.green
+                              : Colors.red,
+                        ),
+                      ),
+                    );
+                  },
+                ),
               ),
             ],
           );
         },
       ),
+
+      // ---------------------------
+      //   FLOATING ACTION BUTTON
+      //   (opens Reports screen)
+      // ---------------------------
       floatingActionButton: FloatingActionButton(
         onPressed: () {
+          /// Opens ReportsScreen as a new route.
           Navigator.of(context).push(
-            MaterialPageRoute(builder: (context) => const AddExpensePage()),
+            MaterialPageRoute(
+              builder: (context) => const ReportsScreen(),
+            ),
           );
         },
-        child: const Icon(Icons.add),
+        child: const Icon(Icons.insights_outlined),
       ),
     );
   }
 
+  /// Returns an icon for a given payment category.
   IconData _getCategoryIcon(Category category) {
     switch (category) {
       case Category.food:
@@ -111,6 +160,8 @@ class DashboardPage extends StatelessWidget {
         return Icons.directions_car;
       case Category.shopping:
         return Icons.shopping_bag;
+      case Category.entertainment:
+        return Icons.movie;
       case Category.other:
         return Icons.category;
     }
