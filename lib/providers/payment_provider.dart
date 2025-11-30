@@ -101,6 +101,26 @@ class PaymentProvider with ChangeNotifier {
     notifyListeners();
   }
 
+  /// Update an existing payment.
+  Future<void> updatePayment(Payment payment) async {
+    await _dao.updatePayment(payment);
+
+    final index = _payments.indexWhere((p) => p.id == payment.id);
+    if (index != -1) {
+      _payments[index] = payment;
+      _sortPayments();
+      notifyListeners();
+    }
+  }
+
+  /// Delete a payment by ID.
+  Future<void> deletePayment(String id) async {
+    await _dao.deletePayment(id);
+
+    _payments.removeWhere((p) => p.id == id);
+    notifyListeners();
+  }
+
   /// Total expenses (sum of amounts where isIncome == false).
   ///
   /// This is used by the Dashboard summary card and can be reused
