@@ -4,6 +4,7 @@ import '../models/monthly_goal.dart';
 import '../logic/badge_logic.dart';
 import '../models/payment.dart';
 import '../data/local/payment_dao.dart';
+import '../data/local/goal_dao.dart';
 
 
 class GamificationPage extends StatefulWidget {
@@ -15,7 +16,8 @@ class GamificationPage extends StatefulWidget {
 
 class _GamificationPageState extends State<GamificationPage> {
   MonthlyGoal _monthlyGoal =
-  const MonthlyGoal(targetAmount: 500.0, currentSavings: 350.0);
+  const MonthlyGoal(targetAmount: 0.0, currentSavings: 0.0);
+
 
   late final List<Badge> _badgeDefinitions;
   List<Badge> _badges = [];
@@ -100,22 +102,21 @@ class _GamificationPageState extends State<GamificationPage> {
       final yearMonth =
           '${now.year.toString().padLeft(4, '0')}-${now.month.toString().padLeft(2, '0')}';
 
-      final dao = PaymentDao();
-      final List<Payment> payments =
-      await dao.getPaymentsByMonth(yearMonth);
+      final paymentDao = PaymentDao();
+      final goalDao = GoalDao();
 
-      double savings = 0;
+      // Use your teammate's DAO method instead of manual loop
+      final incomeTotal =
+      await paymentDao.getTotalByMonth(yearMonth, income: true);
+      final expenseTotal =
+      await paymentDao.getTotalByMonth(yearMonth, income: false);
 
-      for (final p in payments) {
-        if (p.isIncome) {
-          savings += p.amount;
-        } else {
-          savings -= p.amount;
-        }
-      }
+      final savings = incomeTotal - expenseTotal;
+
+      final target = await goalDao.getMonthlyGoal(now);
 
       final updatedGoal = MonthlyGoal(
-        targetAmount: _monthlyGoal.targetAmount,
+        targetAmount: target,
         currentSavings: savings,
       );
 
@@ -133,11 +134,13 @@ class _GamificationPageState extends State<GamificationPage> {
       print('Gamification error: $e');
       print(stack);
       setState(() {
-      _error = e.toString();
-      _isLoading = false;
+        _error = e.toString();
+        _isLoading = false;
       });
     }
   }
+
+
 
 
 
@@ -171,9 +174,13 @@ class _GamificationPageState extends State<GamificationPage> {
                 backgroundColor: Colors.blue,
                 foregroundColor: Colors.white,
               ),
-              onPressed: () {
+              onPressed: () async {
                 final newGoal = double.tryParse(controller.text);
                 if (newGoal != null && newGoal > 0) {
+                  final now = DateTime.now();
+                  final goalDao = GoalDao();
+                  await goalDao.setMonthlyGoal(now, newGoal);
+
                   setState(() {
                     _monthlyGoal = MonthlyGoal(
                       targetAmount: newGoal,
