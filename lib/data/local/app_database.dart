@@ -38,8 +38,18 @@ class AppDatabase {
       date TEXT NOT NULL,
       isIncome INTEGER NOT NULL,
       isSaving INTEGER NOT NULL
-    );   
-    ''');
+    )
+  ''');
+
+    await db.execute('''
+    CREATE TABLE monthly_goals (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      year INTEGER NOT NULL,
+      month INTEGER NOT NULL,
+      target_amount REAL NOT NULL
+    )
+  ''');
+
     //Add all of the table creations (first time) SQL above ^
   }
 
