@@ -265,7 +265,7 @@ class _AddPaymentPageState extends State<AddPaymentPage> {
                     ElevatedButton(
                       onPressed: _submitPaymentData,
                       child: Text(
-                        _editingId != null ? 'Update' : 'Save Payment',
+                        _editingId != null ? 'Update ' : 'Save Payment',
                       ),
                     ),
                   ],
