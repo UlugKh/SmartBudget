@@ -31,15 +31,18 @@ class _ReportsScreenState extends State<ReportsScreen> {
   /// For week: any day in that week.
   DateTime _anchorDate = DateTime.now();
 
-  /// Generic net bar values for the current chart:
+  /// Income per bucket for the bar chart
   ///  - Week mode: 7 values (Mon..Sun)
   ///  - Month mode: 4 values (W1..W4)
-  List<double> _netBars = [];
+  List<double> _incomeBars = [];
 
-  /// Labels for each bar in the net chart.
+  /// Expenses per bucket for the bar chart (stored as positive numbers)
+  List<double> _expenseBars = [];
+
+  /// Labels for each bar.
   ///  - Week mode: ["Mon", "Tue", ...]
   ///  - Month mode: ["W1", "W2", "W3", "W4"]
-  List<String> _netBarLabels = [];
+  List<String> _barLabels = [];
 
   /// Expenses per category (for pie chart).
   Map<String, double> _categoryExpenses = {};
@@ -100,24 +103,19 @@ class _ReportsScreenState extends State<ReportsScreen> {
       _loading = true;
     });
 
-    // Local accumulators
-    double income = 0.0;
-    double expenses = 0.0;
+    double incomeTotal = 0.0;
+    double expenseTotal = 0.0;
 
-    // These will become the values + labels for the bar chart
-    late List<double> netBuckets;
-    late List<String> netLabels;
+    late List<double> incomeBuckets;
+    late List<double> expenseBuckets;
+    late List<String> labels;
 
-    // Expenses per category for pie chart
     final Map<String, double> catExpenses = {};
 
     try {
-      // 1) Get ALL payments from DB
       final allPayments = await _dao.getAllPayments();
 
-      // 2) Filter by current mode (month / week) in Dart
       late final List<Payment> payments;
-
       if (_mode == ReportMode.month) {
         payments = allPayments.where((p) {
           return p.date.year == _anchorDate.year &&
@@ -126,48 +124,45 @@ class _ReportsScreenState extends State<ReportsScreen> {
       } else {
         final start = _weekStart;
         final end = _weekEnd;
-
         payments = allPayments.where((p) {
-          // Compare using date only (no time)
           final d = DateTime(p.date.year, p.date.month, p.date.day);
           return !d.isBefore(start) && !d.isAfter(end);
         }).toList();
       }
 
-      // 3) Prepare buckets for net chart
       if (_mode == ReportMode.week) {
-        // 7 buckets for Mon..Sun
-        netBuckets = List.filled(7, 0.0);
-        netLabels = const ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+        incomeBuckets = List.filled(7, 0.0);
+        expenseBuckets = List.filled(7, 0.0);
+        labels = const ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
       } else {
-        // EXACTLY 4 weeks in a month: W1..W4
-        netBuckets = List.filled(4, 0.0);
-        netLabels = const ["W1", "W2", "W3", "W4"];
+        incomeBuckets = List.filled(4, 0.0);
+        expenseBuckets = List.filled(4, 0.0);
+        labels = const ["W1", "W2", "W3", "W4"];
       }
 
-      // 4) Aggregate numbers from filtered payments
       for (final p in payments) {
-        final delta = p.isIncome ? p.amount : -p.amount;
-
-        // income / expense totals
+        // overall totals
         if (p.isIncome) {
-          income += p.amount;
+          incomeTotal += p.amount;
         } else {
-          expenses += p.amount;
+          expenseTotal += p.amount;
           final key = p.category.name;
           catExpenses[key] = (catExpenses[key] ?? 0) + p.amount;
         }
 
-        // net distribution into buckets for chart
+        // bucket index
+        int idx;
         if (_mode == ReportMode.week) {
-          // By weekday (Mon..Sun)
-          final dayIndex = p.date.weekday - 1; // Mon=0..Sun=6
-          netBuckets[dayIndex] += delta;
+          idx = p.date.weekday - 1; // 0..6
         } else {
-          // By week of month → clamp to last bucket so days > 28 go into W4
-          int weekIndex = (p.date.day - 1) ~/ 7; // 0..4
-          if (weekIndex > 3) weekIndex = 3;      // keep inside 0..3
-          netBuckets[weekIndex] += delta;
+          idx = (p.date.day - 1) ~/ 7; // 0..?
+          if (idx > 3) idx = 3; // clamp into W4
+        }
+
+        if (p.isIncome) {
+          incomeBuckets[idx] += p.amount;
+        } else {
+          expenseBuckets[idx] += p.amount;
         }
       }
     } catch (e, st) {
@@ -180,12 +175,13 @@ class _ReportsScreenState extends State<ReportsScreen> {
     } finally {
       if (!mounted) return;
       setState(() {
-        _totalIncome = income;
-        _totalExpenses = expenses;
-        _netTotal = income - expenses;
+        _totalIncome = incomeTotal;
+        _totalExpenses = expenseTotal;
+        _netTotal = incomeTotal - expenseTotal;
 
-        _netBars = netBuckets;
-        _netBarLabels = netLabels;
+        _incomeBars = incomeBuckets;
+        _expenseBars = expenseBuckets;
+        _barLabels = labels;
         _categoryExpenses = catExpenses;
 
         _loading = false;
@@ -250,9 +246,9 @@ class _ReportsScreenState extends State<ReportsScreen> {
             // --------------------------------------------------
             Row(
               children: [
-                // ------ LEFT SIDE: Chips ------
                 ChoiceChip(
-                  label: const Text('Month', style: TextStyle(fontSize: 13)),
+                  label: const Text('Month',
+                      style: TextStyle(fontSize: 13)),
                   selected: _mode == ReportMode.month,
                   onSelected: (_) => _switchMode(ReportMode.month),
                   materialTapTargetSize:
@@ -260,16 +256,14 @@ class _ReportsScreenState extends State<ReportsScreen> {
                 ),
                 const SizedBox(width: 6),
                 ChoiceChip(
-                  label: const Text('Week', style: TextStyle(fontSize: 13)),
+                  label: const Text('Week',
+                      style: TextStyle(fontSize: 13)),
                   selected: _mode == ReportMode.week,
                   onSelected: (_) => _switchMode(ReportMode.week),
                   materialTapTargetSize:
                   MaterialTapTargetSize.shrinkWrap,
                 ),
-
                 const Spacer(),
-
-                // ------ RIGHT SIDE: Arrows + Stacked Label ------
                 Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
@@ -279,8 +273,6 @@ class _ReportsScreenState extends State<ReportsScreen> {
                       padding: EdgeInsets.zero,
                       constraints: const BoxConstraints(),
                     ),
-
-                    // ---- STACKED LABEL (2 lines) ----
                     Column(
                       crossAxisAlignment: CrossAxisAlignment.center,
                       children: [
@@ -306,7 +298,6 @@ class _ReportsScreenState extends State<ReportsScreen> {
                         ),
                       ],
                     ),
-
                     IconButton(
                       onPressed: _goToNextPeriod,
                       icon: const Icon(Icons.chevron_right),
@@ -334,13 +325,13 @@ class _ReportsScreenState extends State<ReportsScreen> {
             const SizedBox(height: 28),
             Text(
               _mode == ReportMode.week
-                  ? "Net per weekday"
-                  : "Net per week (this month)",
+                  ? "Income & expenses per weekday"
+                  : "Income & expenses per week",
               style: const TextStyle(
                   fontSize: 20, fontWeight: FontWeight.w600),
             ),
             const SizedBox(height: 12),
-            _buildNetBarChart(),
+            _buildIncomeExpenseChart(),
 
             const SizedBox(height: 28),
             const Text(
@@ -442,62 +433,29 @@ class _ReportsScreenState extends State<ReportsScreen> {
     );
   }
 
-// ---------------------------------------------------------------------------
-// NET BAR CHART
-//  - week mode:   net per weekday (Mon..Sun)
-//  - month mode:  net per week of month (W1..W4)
-// ---------------------------------------------------------------------------
-  Widget _buildNetBarChart() {
-    if (_netBars.isEmpty) {
-      return const Center(
-        child: Text('No data for this period'),
-      );
+  // ---------------------------------------------------------------------------
+  // INCOME vs EXPENSE BAR CHART
+  // ---------------------------------------------------------------------------
+  Widget _buildIncomeExpenseChart() {
+    if (_incomeBars.isEmpty || _expenseBars.isEmpty) {
+      return const Center(child: Text('No data for this period'));
     }
 
-    double minY = 0;
-    double maxY = 0;
+    final bucketCount = _incomeBars.length;
 
-    for (final v in _netBars) {
-      minY = min(minY, v);
-      maxY = max(maxY, v);
+    // Find biggest magnitude for symmetric Y axis
+    double biggest = 0;
+    for (var i = 0; i < bucketCount; i++) {
+      biggest = max(biggest, _incomeBars[i].abs());
+      biggest = max(biggest, _expenseBars[i].abs());
     }
 
-    if (minY == 0 && maxY == 0) {
-      return const Center(
-        child: Text('No data for this period'),
-      );
+    if (biggest == 0) {
+      return const Center(child: Text('No data for this period'));
     }
 
-    final double padding = max(maxY.abs(), minY.abs()) * 0.2;
-    minY -= padding;
-    maxY += padding;
-
-    // ----- choose a "nice" interval so labels don't overlap -----
-    double range = maxY - minY;
-    if (range <= 0) range = maxY.abs();
-    if (range == 0) range = 1;
-
-    // target ≈ 5 lines → 4 intervals
-    final double rawStep = range / 4;
-
-    double _niceStep(double step) {
-      final double magnitude =
-      pow(10, (log(step) / ln10).floor()).toDouble(); // 1,10,100,..
-      final double residual = step / magnitude;
-      double nice;
-      if (residual <= 1) {
-        nice = 1;
-      } else if (residual <= 2) {
-        nice = 2;
-      } else if (residual <= 5) {
-        nice = 5;
-      } else {
-        nice = 10;
-      }
-      return nice * magnitude;
-    }
-
-    final double yStep = _niceStep(rawStep);
+    final double maxY = biggest * 1.2;
+    final double minY = -maxY;
 
     return SizedBox(
       height: 230,
@@ -505,23 +463,27 @@ class _ReportsScreenState extends State<ReportsScreen> {
         BarChartData(
           minY: minY,
           maxY: maxY,
-          barGroups: _netBars
-              .asMap()
-              .entries
-              .map(
-                (e) => BarChartGroupData(
-              x: e.key,
+          barGroups: List.generate(bucketCount, (i) {
+            return BarChartGroupData(
+              x: i,
               barRods: [
+                // Income up
                 BarChartRodData(
-                  toY: e.value,
-                  width: 18,
-                  color: e.value >= 0 ? Colors.green : Colors.red,
+                  toY: _incomeBars[i],
+                  width: 10,
+                  color: Colors.green,
+                  borderRadius: BorderRadius.circular(4),
+                ),
+                // Expenses down
+                BarChartRodData(
+                  toY: -_expenseBars[i],
+                  width: 10,
+                  color: Colors.red,
                   borderRadius: BorderRadius.circular(4),
                 ),
               ],
-            ),
-          )
-              .toList(),
+            );
+          }),
           gridData: FlGridData(show: true),
           borderData: FlBorderData(show: false),
           titlesData: FlTitlesData(
@@ -529,13 +491,8 @@ class _ReportsScreenState extends State<ReportsScreen> {
               sideTitles: SideTitles(
                 showTitles: true,
                 reservedSize: 40,
-                interval: yStep, // grid + labels every yStep
-                getTitlesWidget: (value, meta) {
-                  return Text(
-                    value.toInt().toString(),
-                    style: const TextStyle(fontSize: 11),
-                  );
-                },
+                getTitlesWidget: (value, meta) =>
+                    Text(value.toInt().toString()),
               ),
             ),
             bottomTitles: AxisTitles(
@@ -543,19 +500,17 @@ class _ReportsScreenState extends State<ReportsScreen> {
                 showTitles: true,
                 getTitlesWidget: (value, meta) {
                   final i = value.toInt();
-                  if (i < 0 || i >= _netBarLabels.length) {
+                  if (i < 0 || i >= _barLabels.length) {
                     return const SizedBox.shrink();
                   }
-                  return Text(_netBarLabels[i]);
+                  return Text(_barLabels[i]);
                 },
               ),
             ),
-            topTitles: const AxisTitles(
-              sideTitles: SideTitles(showTitles: false),
-            ),
-            rightTitles: const AxisTitles(
-              sideTitles: SideTitles(showTitles: false),
-            ),
+            topTitles:
+            const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+            rightTitles:
+            const AxisTitles(sideTitles: SideTitles(showTitles: false)),
           ),
         ),
       ),
