@@ -20,14 +20,17 @@ class _AddPaymentPageState extends State<AddPaymentPage> {
   /// Controller for the "amount" text field
   final _amountController = TextEditingController();
 
-  /// Currently selected date for the payment (null until user picks)
-  DateTime? _selectedDate;
+  /// Currently selected date for the payment (defaults to today)
+  DateTime? _selectedDate = DateTime.now();
 
   /// Currently selected category, defaults to "food"
   Category _selectedCategory = Category.food;
 
   /// Whether the payment is an income
   bool _isIncome = false;
+
+  /// ID of the payment currently being edited (null if adding new)
+  String? _editingId;
 
   @override
   void dispose() {
@@ -86,8 +89,8 @@ class _AddPaymentPageState extends State<AddPaymentPage> {
 
     // Build a Payment model instance from the form data
     final payment = Payment(
-      // Use current time millis as simple unique string id
-      id: DateTime.now().millisecondsSinceEpoch.toString(),
+      // Use existing ID if editing, otherwise generate new one
+      id: _editingId ?? DateTime.now().millisecondsSinceEpoch.toString(),
       amount: enteredAmount,
       category: _selectedCategory,
       note: _noteController.text.trim(),
@@ -96,15 +99,13 @@ class _AddPaymentPageState extends State<AddPaymentPage> {
       isSaving: false,
     );
 
-    // Tell the provider to add this payment.
-    // PaymentProvider will:
-    //  - insert it into SQLite via PaymentDao
-    //  - update the in-memory list
-    //  - notify listeners so UI updates
-    await Provider.of<PaymentProvider>(
-      context,
-      listen: false,
-    ).addPayment(payment);
+    final provider = Provider.of<PaymentProvider>(context, listen: false);
+
+    if (_editingId != null) {
+      await provider.updatePayment(payment);
+    } else {
+      await provider.addPayment(payment);
+    }
 
     // Important: we DO NOT pop the page.
     // This page is used as a bottom-nav tab, not as a pushed route,
@@ -113,18 +114,35 @@ class _AddPaymentPageState extends State<AddPaymentPage> {
     // Instead, we:
     //  - reset the form fields
     //  - show a SnackBar confirmation
+    _resetForm();
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(_editingId != null ? 'Payment updated' : 'Payment saved'),
+      ),
+    );
+  }
+
+  void _resetForm() {
     _noteController.clear();
     _amountController.clear();
     setState(() {
-      _selectedDate = null;
-      _selectedDate = null;
+      _selectedDate = DateTime.now();
       _selectedCategory = Category.food;
       _isIncome = false;
+      _editingId = null;
     });
+  }
 
-    ScaffoldMessenger.of(
-      context,
-    ).showSnackBar(const SnackBar(content: Text('Payment saved')));
+  void _startEditing(Payment payment) {
+    setState(() {
+      _editingId = payment.id;
+      _noteController.text = payment.note;
+      _amountController.text = payment.amount.toString();
+      _selectedDate = payment.date;
+      _selectedCategory = payment.category;
+      _isIncome = payment.isIncome;
+    });
   }
 
   @override
@@ -238,13 +256,7 @@ class _AddPaymentPageState extends State<AddPaymentPage> {
                           Navigator.of(context).pop();
                         } else {
                           // In bottom-tab context: just clear the form
-                          _noteController.clear();
-                          _amountController.clear();
-                          setState(() {
-                            _selectedDate = null;
-                            _selectedCategory = Category.food;
-                            _isIncome = false;
-                          });
+                          _resetForm();
                         }
                       },
                       child: const Text('Cancel'),
@@ -252,7 +264,9 @@ class _AddPaymentPageState extends State<AddPaymentPage> {
                     // Save button → calls _submitPaymentData
                     ElevatedButton(
                       onPressed: _submitPaymentData,
-                      child: const Text('Save Payment'),
+                      child: Text(
+                        _editingId != null ? 'Update Payment' : 'Save Payment',
+                      ),
                     ),
                   ],
                 ),
@@ -328,6 +342,63 @@ class _AddPaymentPageState extends State<AddPaymentPage> {
                                 fontWeight: FontWeight.bold,
                                 color: p.isIncome ? Colors.green : Colors.red,
                               ),
+                            ),
+                            // Three-dot menu for Edit/Delete
+                            PopupMenuButton<String>(
+                              onSelected: (value) {
+                                if (value == 'edit') {
+                                  _startEditing(p);
+                                } else if (value == 'delete') {
+                                  showDialog(
+                                    context: context,
+                                    builder: (ctx) => AlertDialog(
+                                      title: const Text('Delete Payment'),
+                                      content: const Text(
+                                        'Are you sure you want to delete this payment?',
+                                      ),
+                                      actions: [
+                                        TextButton(
+                                          onPressed: () => Navigator.pop(ctx),
+                                          child: const Text('Cancel'),
+                                        ),
+                                        TextButton(
+                                          onPressed: () {
+                                            provider.deletePayment(p.id);
+                                            Navigator.pop(ctx);
+                                          },
+                                          child: const Text(
+                                            'Delete',
+                                            style: TextStyle(color: Colors.red),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  );
+                                }
+                              },
+                              itemBuilder: (BuildContext context) =>
+                                  <PopupMenuEntry<String>>[
+                                    const PopupMenuItem<String>(
+                                      value: 'edit',
+                                      child: ListTile(
+                                        leading: Icon(Icons.edit),
+                                        title: Text('Edit'),
+                                      ),
+                                    ),
+                                    const PopupMenuItem<String>(
+                                      value: 'delete',
+                                      child: ListTile(
+                                        leading: Icon(
+                                          Icons.delete,
+                                          color: Colors.red,
+                                        ),
+                                        title: Text(
+                                          'Delete',
+                                          style: TextStyle(color: Colors.red),
+                                        ),
+                                      ),
+                                    ),
+                                  ],
                             ),
                           ],
                         ),
