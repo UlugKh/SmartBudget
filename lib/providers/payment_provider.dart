@@ -107,7 +107,7 @@ class PaymentProvider with ChangeNotifier {
   /// anywhere we need a "total spent" number.
   double get totalExpenses {
     return _payments
-        .where((p) => !p.isIncome)                // only expenses
+        .where((p) => !p.isIncome) // only expenses
         .fold(0.0, (sum, item) => sum + item.amount);
   }
 
@@ -127,6 +127,39 @@ class PaymentProvider with ChangeNotifier {
       }
     }
     return totals;
+  }
+
+  /// Total expenses for the current month.
+  double get totalExpensesCurrentMonth {
+    final now = DateTime.now();
+    return _payments
+        .where(
+          (p) =>
+              !p.isIncome &&
+              p.date.year == now.year &&
+              p.date.month == now.month,
+        )
+        .fold(0.0, (sum, item) => sum + item.amount);
+  }
+
+  /// Top spending category for the current month.
+  MapEntry<Category, double>? get topCategoryCurrentMonth {
+    final now = DateTime.now();
+    final expenses = _payments.where(
+      (p) =>
+          !p.isIncome && p.date.year == now.year && p.date.month == now.month,
+    );
+
+    if (expenses.isEmpty) return null;
+
+    final Map<Category, double> totals = {};
+    for (var p in expenses) {
+      totals[p.category] = (totals[p.category] ?? 0) + p.amount;
+    }
+
+    final sorted = totals.entries.toList()
+      ..sort((a, b) => b.value.compareTo(a.value));
+    return sorted.first;
   }
 
   /// Creates some example payments for first run.

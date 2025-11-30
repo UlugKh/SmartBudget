@@ -13,13 +13,13 @@ import 'reports.dart';
 ///  - A floating button to quickly open the Reports screen
 ///
 /// The data comes from **PaymentProvider**, which loads from SQLite.
-class DashboardPage extends StatelessWidget {
-  const DashboardPage({super.key});
+class MonitoringPage extends StatelessWidget {
+  const MonitoringPage({super.key});
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('SmartBudget Dashboard')),
+      appBar: AppBar(title: const Text('Monitoring')),
 
       /// Consumer listens to PaymentProvider.
       /// Whenever payments are loaded from SQLite or updated,
@@ -27,7 +27,7 @@ class DashboardPage extends StatelessWidget {
       body: Consumer<PaymentProvider>(
         builder: (context, provider, child) {
           final total = provider.totalExpenses; // total spent (expenses only)
-          final payments = provider.payments;   // all payments from database
+          final payments = provider.payments; // all payments from database
 
           return Column(
             children: [
@@ -52,15 +52,13 @@ class DashboardPage extends StatelessWidget {
                       // Total spent value
                       Text(
                         '\$${total.toStringAsFixed(2)}',
-                        style: Theme.of(context)
-                            .textTheme
-                            .displayMedium
+                        style: Theme.of(context).textTheme.displayMedium
                             ?.copyWith(
-                          fontWeight: FontWeight.bold,
-                          color: Theme.of(context)
-                              .colorScheme
-                              .onPrimaryContainer,
-                        ),
+                              fontWeight: FontWeight.bold,
+                              color: Theme.of(
+                                context,
+                              ).colorScheme.onPrimaryContainer,
+                            ),
                       ),
                     ],
                   ),
@@ -90,43 +88,40 @@ class DashboardPage extends StatelessWidget {
               Expanded(
                 child: payments.isEmpty
                     ? const Center(child: Text('No payments yet!'))
-
-                /// Show newest-first list of payments
+                    /// Show newest-first list of payments
                     : ListView.builder(
-                  itemCount: payments.length,
-                  itemBuilder: (context, index) {
-                    final payment = payments[index];
+                        itemCount: payments.length,
+                        itemBuilder: (context, index) {
+                          final payment = payments[index];
 
-                    return ListTile(
-                      leading: CircleAvatar(
-                        child: Icon(
-                          _getCategoryIcon(payment.category),
-                        ),
+                          return ListTile(
+                            leading: CircleAvatar(
+                              child: Icon(_getCategoryIcon(payment.category)),
+                            ),
+
+                            // Main text: note or description
+                            title: Text(payment.note),
+
+                            // Date of the payment
+                            subtitle: Text(
+                              DateFormat.yMd().format(payment.date),
+                            ),
+
+                            // Amount (expense red, income green)
+                            trailing: Text(
+                              payment.isIncome
+                                  ? '+\$${payment.amount.toStringAsFixed(2)}'
+                                  : '-\$${payment.amount.toStringAsFixed(2)}',
+                              style: TextStyle(
+                                fontWeight: FontWeight.bold,
+                                color: payment.isIncome
+                                    ? Colors.green
+                                    : Colors.red,
+                              ),
+                            ),
+                          );
+                        },
                       ),
-
-                      // Main text: note or description
-                      title: Text(payment.note),
-
-                      // Date of the payment
-                      subtitle: Text(
-                        DateFormat.yMd().format(payment.date),
-                      ),
-
-                      // Amount (expense red, income green)
-                      trailing: Text(
-                        payment.isIncome
-                            ? '+\$${payment.amount.toStringAsFixed(2)}'
-                            : '-\$${payment.amount.toStringAsFixed(2)}',
-                        style: TextStyle(
-                          fontWeight: FontWeight.bold,
-                          color: payment.isIncome
-                              ? Colors.green
-                              : Colors.red,
-                        ),
-                      ),
-                    );
-                  },
-                ),
               ),
             ],
           );
@@ -141,9 +136,7 @@ class DashboardPage extends StatelessWidget {
         onPressed: () {
           /// Opens ReportsScreen as a new route.
           Navigator.of(context).push(
-            MaterialPageRoute(
-              builder: (context) => const ReportsScreen(),
-            ),
+            MaterialPageRoute(builder: (context) => const ReportsScreen()),
           );
         },
         child: const Icon(Icons.insights_outlined),
