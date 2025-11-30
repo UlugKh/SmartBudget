@@ -99,24 +99,19 @@ class _GamificationPageState extends State<GamificationPage> {
 
     try {
       final now = DateTime.now();
+      final yearMonth =
+          '${now.year.toString().padLeft(4, '0')}-${now.month.toString().padLeft(2, '0')}';
+
       final paymentDao = PaymentDao();
       final goalDao = GoalDao();
 
-      final allPayments = await paymentDao.getAllPayments();
+      // Use your teammate's DAO method instead of manual loop
+      final incomeTotal =
+      await paymentDao.getTotalByMonth(yearMonth, income: true);
+      final expenseTotal =
+      await paymentDao.getTotalByMonth(yearMonth, income: false);
 
-      final currentMonthPayments = allPayments.where((p) {
-        return p.date.year == now.year && p.date.month == now.month;
-      });
-
-      double savings = 0;
-
-      for (final p in currentMonthPayments) {
-        if (p.isIncome) {
-          savings += p.amount;
-        } else {
-          savings -= p.amount;
-        }
-      }
+      final savings = incomeTotal - expenseTotal;
 
       final target = await goalDao.getMonthlyGoal(now);
 
@@ -144,6 +139,7 @@ class _GamificationPageState extends State<GamificationPage> {
       });
     }
   }
+
 
 
 
